@@ -50,11 +50,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 .boss-name { font-size: 13px; color: #333; font-weight: 600; }
 .row-needs { font-size: 13px; color: #666; margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.status-dashboard { display: flex; justify-content: space-between; align-items: center; background: #fafafa; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
-.status-item { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-.status-dot { width: 10px; height: 10px; border-radius: 50%; background: #e0e0e0; transition: 0.3s; border: 1px solid #ddd; }
-.status-dot.on { background: #00C851; border-color: #007E33; box-shadow: 0 0 5px rgba(0, 200, 81, 0.4); }
-.status-label { font-size: 10px; color: #999; }
+/* --- 優化後的狀態膠囊 (Pills) --- */
+.status-dashboard { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.status-pill { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; background: #f0f2f5; color: #888; border: 1px solid #e0e0e0; transition: 0.3s; }
+.status-pill.on { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+.status-pill.on::before { content: '✅'; font-size: 12px; }
+.status-pill:not(.on)::before { content: '❌'; font-size: 12px; opacity: 0.5; }
 
 .progress-bar { font-size: 12px; font-weight: bold; color: #d32f2f; background: #ffebee; padding: 8px 10px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
 .progress-bar.finished { color: #00C851; background: #e8f5e9; }
