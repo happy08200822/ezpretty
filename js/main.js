@@ -136,44 +136,120 @@ function renderList() {
     list.innerHTML = res.map(d => createCardHTML(d)).join('');
 }
 
+// ==========================================
+// 全新 CRM 視角卡片渲染與邏輯
+// ==========================================
 function createCardHTML(d) {
+    // 1. 動態提示語 (Action Alert) 判斷邏輯
+    let alertMsg = '';
+    let alertClass = '';
+    const isL = (d.L && d.L.includes('✅')), isM = (d.M && d.M.includes('✅'));
+    const isN = (d.N && d.N.includes('✅')), isO = (d.O && d.O.includes('✅'));
+    const isQ = (d.Q && d.Q.includes('✅'));
+
+    if (d.R && (d.R.includes('無效') || d.R.includes('拒絕'))) {
+        alertMsg = '💀 此單已標記為無效！'; alertClass = '';
+    } else if (d.W === '已成交') {
+        alertMsg = '🎉 恭喜！此單已成交！'; alertClass = 'success';
+    } else if (d.U) {
+        alertMsg = (d.B && d.B.includes('自開')) ? `💪 業務自開：${d.U}` : `🚀 已派單給：${d.U}`; alertClass = 'neutral';
+    } else if (!isL && !isN && !isQ) {
+        alertMsg = '🆕 新單請聯絡！'; alertClass = '';
+    } else if (isL && !isM) {
+        if (!isN) alertMsg = '📞 已加Line！請打電話！';
+        else if (isN && !isO) alertMsg = '🔄 未接！繼續打！';
+        else if (isN && isO && !isQ) alertMsg = '🚨 裝死不看！';
+        else if (isQ) alertMsg = '📧 已寄信！繼續追殺！';
+    } else if (isL && isM) {
+        if (!isN && !isO) alertMsg = '📞 已讀沒回！請打電話！';
+        else if (isN && !isO) alertMsg = '🔄 已讀未接！繼續打！';
+        else if (isN && isO) alertMsg = '🔥 已讀已通！該派單了！';
+    } else if (!isL && isN) {
+        if (!isO) alertMsg = '🔄 未通！繼續打！';
+        else alertMsg = '⚠️ 有通沒加Line！';
+    } else {
+        alertMsg = '🔔 請持續追蹤！'; alertClass = '';
+    }
+
+    // 2. 狀態膠囊
     const lights = [
-        {l:'Line',v:d.L},{l:'已讀',v:d.M},{l:'電話',v:d.N},{l:'撥通',v:d.O},{l:'Email',v:d.Q}
-    ].map(x => `<div class="status-pill ${x.v==='✅'?'on':''}">${x.l}</div>`).join('');
+        {l:'Line',v:isL},{l:'已讀',v:isM},{l:'電話',v:isN},{l:'撥通',v:isO},{l:'Email',v:isQ}
+    ].map(x => `<div class="status-pill ${x.v ? 'on' : ''}">${x.l}</div>`).join('');
+
+    // 3. 基礎資料處理
+    const dateStr = d.K ? d.K.split(' ')[0] : '';
+    const rLabel = d.R || '無進度';
+    const borderClass = `c-${d._source}`;
     
+    // 按鈕狀態處理
     const hasGroup = d.S && d.S.startsWith('http');
     const groupBtn = hasGroup 
-        ? `<a href="${d.S}" target="_blank" class="btn-action btn-success" style="display:block;margin-bottom:8px;text-decoration:none;">💬 開啟群組</a>` 
-        : `<button class="btn-action btn-disabled" style="display:block;width:100%;margin-bottom:8px;">🚫 尚未建群</button>`;
-    
-    const borderClass = `c-${d._source}`; 
-    const emailRow = d.I ? `<div class="contact-grid"><div><div class="contact-label">Email</div><div class="contact-val" style="font-size:12px">${d.I}</div></div><a href="mailto:${d.I}" class="btn-action">✉️</a></div>` : '';
-    const idDisplay = d.AA ? `<div style="font-size:10px;color:#bbb;text-align:center;margin-top:-6px;margin-bottom:12px;font-family:monospace;">ID: ${d.AA.substring(0,8)}...</div>` : '';
-    const dispatchInfo = d.U ? `<div class="dispatch-info"><div style="font-weight:bold; margin-bottom:4px; color:#333;">👤 ${d.U}</div><div>狀態：${d.W||'-'} ｜ 結果：${d.Y||'-'}</div><div class="meta-time">${d.V ? `<div>👉 指派: ${d.V}</div>` : ''}${d.X ? `<div>⏰ 展示: ${d.X}</div>` : ''}</div></div>` : '';
+        ? `<a href="${d.S}" target="_blank" class="action-btn btn-white">💬 群組</a>` 
+        : `<div class="action-btn btn-disabled">🚫 無群組</div>`;
+    const lineLink = (d.G && d.G.length > 1) ? `https://line.me/ti/p/~${d.G}` : `https://line.me/R/nv/addFriends`;
 
     return `
-    <div class="card" onclick="toggleCard(this)">
-        <div class="card-border ${borderClass}"></div>
-        <div class="card-summary">
-            <div class="row-header"><div class="shop-name">${d.E}</div><div class="key-badge">#${d.AB} ｜ ${d.K ? d.K.split(' ')[0] : ''}</div></div>
-            <div class="row-tags"><span class="tag">${d.D||'無'}</span><span class="tag">${d.C||'無'}</span><div class="boss-name">👤 ${d.F||'老闆'}</div></div>
-            <div class="status-dashboard" style="padding:5px 20px;">${lights}</div>
-            <div class="progress-bar ${d.W==='已成交'?'finished':''}"><div class="progress-icon"></div><span>${d.R||'無進度'}</span></div>
-        </div>
-        <div class="card-details">
-            <div class="contact-grid"><div>電話</div><a href="tel:${d.H}" class="btn-action">📞 ${d.H}</a></div>
-            <div class="contact-grid"><div>Line ID</div><button class="btn-action" onclick="handleAddLine('${d.G}', '${d.H}', event)">💬 加好友</button></div>
-            ${emailRow}
-            <hr style="border:0;border-top:1px dashed #eee;margin:10px 0;">
-            ${groupBtn} ${idDisplay}
-            <div class="log-area">${d.P||'無紀錄'}</div>
-            ${dispatchInfo}
-            <div class="footer-actions">
-                <button class="btn-action" onclick="openEdit('${d.AB}', event)">✏️ 編輯</button>
-                <button class="btn-action btn-primary" onclick="openDispatch('${d.AB}', event)">🚀 派單</button>
+    <div class="card">
+        <div class="card-top-bar ${borderClass}"></div>
+        <div class="card-content">
+            
+            <div class="crm-header">
+                <div class="crm-tags-left">
+                    <span class="crm-id">#${d.AB}</span>
+                    <span class="crm-tag">🏷️ ${d.C || '無產業'}</span>
+                    <span class="crm-tag-r">${rLabel}</span> </div>
+                <div class="crm-meta-right">
+                    <span class="crm-source ${borderClass}">${d.B || '未知來源'}</span>
+                    <span class="crm-date">${dateStr}</span>
+                </div>
             </div>
+
+            <div class="crm-title-row">
+                <div class="crm-title">${d.D || ''} ${d.E || '無店名'}</div>
+                <button class="btn-icon-small" onclick="copyText('${d.D || ''} ${d.E || ''}')">📄</button>
+            </div>
+
+            <div class="crm-alert ${alertClass}">
+                ${alertMsg}
+            </div>
+
+            <div class="crm-info-box">
+                <div class="info-row"><span class="info-icon">👤</span><span class="info-text">負責人: ${d.F || '老闆'}</span></div>
+                <div class="info-row"><span class="info-icon">📞</span><span class="info-text">電話: ${d.H || '--'}</span> 
+                    ${d.H ? `<button class="btn-icon-small" style="margin-left:8px; padding:2px 6px;" onclick="copyText('${d.H}')">📄</button>` : ''}
+                </div>
+                <div class="info-row"><span class="info-icon">🆔</span><span class="info-text">Line ID: ${d.G || '--'}</span></div>
+                <div class="info-row"><span class="info-icon">📝</span><span class="info-text info-highlight">需求: ${d.J || '無'}</span></div>
+            </div>
+
+            <div class="status-dashboard">${lights}</div>
+
+            <div class="crm-record">
+                <div class="record-title">✍️ 紀錄</div>
+                <div class="record-box">${d.P || '無'}</div>
+            </div>
+
+            <div class="action-grid">
+                <a href="${lineLink}" class="action-btn btn-white">💬 加Line</a>
+                <a href="tel:${d.H}" class="action-btn btn-white">📞 撥號</a>
+                ${groupBtn}
+                <a href="mailto:${d.I}" class="action-btn btn-white">✉️ Email</a>
+                <button class="action-btn btn-orange" onclick="openEdit('${d.AB}', event)">✏️ 更新</button>
+                <button class="action-btn btn-purple" onclick="openDispatch('${d.AB}', event)">🚀 派單</button>
+            </div>
+            
         </div>
     </div>`;
+}
+
+// 輔助函式：複製文字
+window.copyText = function(text) {
+    if (!text.trim()) return;
+    navigator.clipboard.writeText(text).then(() => {
+        alert(`已複製：${text}`);
+    }).catch(err => {
+        console.error('複製失敗', err);
+    });
 }
 
 // ==========================================
@@ -200,7 +276,6 @@ window.setFilter = function(val) {
     renderList(); 
 }
 
-window.toggleCard = function(el) { el.classList.toggle('open'); }
 window.handleSearch = function() { renderList(); }
 
 // ==========================================
@@ -213,7 +288,7 @@ window.openEdit = function(key, e) {
         const el = document.getElementById('tog-'+f);
         if(data[f] && data[f].includes('✅')) el.classList.add('active'); else el.classList.remove('active');
     });
-    document.getElementById('inp-R').value = data.R;
+    document.getElementById('inp-R').value = data.R || '';
     document.getElementById('history-P').innerText = data.P || '';
     document.getElementById('inp-P-new').value = ''; 
     openSheet('sheet-edit');
