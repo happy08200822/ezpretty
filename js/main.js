@@ -26,37 +26,49 @@ function init() {
 
 // 資料處理
 function onDataLoaded(data) {
-    // js/main.js -> onDataLoaded 函式內
+    db = data.map(d => {
+        const srcText = d.B || ""; // 取得 B 欄來源文字
 
-db = data.map(d => {
-    const srcText = d.B || ""; // 取得 B 欄來源文字
+        // 1. 判斷邊框顏色標籤 (_source)
+        if (srcText.includes("公司件")) {
+            d._source = "ads";      // 藍色
+        } else if (srcText.includes("講座件")) {
+            d._source = "seminar";  // 咖啡色
+        } else if (srcText.includes("自開件")) {
+            d._source = "self";     // 綠色
+        } else {
+            d._source = "other";    // 灰色
+        }
 
-    // 1. 判斷邊框顏色標籤 (_source)
-    if (srcText.includes("公司件")) {
-        d._source = "ads";      // 藍色
-    } else if (srcText.includes("講座件")) {
-        d._source = "seminar";  // 咖啡色
-    } else if (srcText.includes("自開件")) {
-        d._source = "self";     // 綠色
-    } else {
-        d._source = "other";    // 灰色
-    }
+        // 2. 判斷大分類模式 (_mode)
+        if (srcText.includes("自開件")) {
+            d._mode = 'self';
+        } else if (d.R && (d.R.includes('無效') || d.R.includes('拒絕'))) {
+            d._mode = 'invalid';
+        } else if (d.U) {
+            d._mode = 'dispatched';
+        } else {
+            d._mode = 'undispatched';
+        }
+        
+        // 3. 判斷第三層狀態過濾 (_status)
+        if (d._mode === 'undispatched' || d._mode === 'invalid') {
+            const isL = (d.L === '✅');
+            const isM = (d.M === '✅');
+            const isN = (d.N === '✅');
 
-    // 2. 判斷大分類模式 (_mode)
-    // 這裡維持原本邏輯：自開件歸類到「自開件」分頁，其餘根據是否有業務歸類
-    if (srcText.includes("自開件")) {
-        d._mode = 'self';
-    } else if (d.R && (d.R.includes('無效') || d.R.includes('拒絕'))) {
-        d._mode = 'invalid';
-    } else if (d.U) {
-        d._mode = 'dispatched';
-    } else {
-        d._mode = 'undispatched';
-    }
-    
-    // ... 之後的狀態判斷邏輯維持不變
-    return d;
-});
+            if (!isL && !isN) {
+                d._status = 'new'; 
+            } else if (d.R && d.R.includes('找不到ID')) {
+                d._status = 'noline'; 
+            } else if (isL && !isM) {
+                d._status = 'unread'; 
+            } else {
+                d._status = 'read'; 
+            }
+        }
+        return d;
+    });
 
     document.getElementById('loading-screen').style.display = 'none';
     updateGlobalCounts();
