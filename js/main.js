@@ -181,12 +181,11 @@ function createCardHTML(d) {
     const rLabel = d.R || '無進度';
     const borderClass = `c-${d._source}`;
     
-    // 按鈕狀態處理
-    const hasGroup = d.S && d.S.startsWith('http');
-    const groupBtn = hasGroup 
-        ? `<a href="${d.S}" target="_blank" class="action-btn btn-white">💬 群組</a>` 
-        : `<div class="action-btn btn-disabled">🚫 無群組</div>`;
+    // 🔗 連結狀態處理
     const lineLink = (d.G && d.G.length > 1) ? `https://line.me/ti/p/~${d.G}` : `https://line.me/R/nv/addFriends`;
+    // 自動組合「地區+店名」作為地圖搜尋關鍵字
+    const mapQuery = encodeURIComponent((d.D || '') + ' ' + (d.E || ''));
+    const mapLink = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`;
 
     return `
     <div class="card">
@@ -197,7 +196,8 @@ function createCardHTML(d) {
                 <div class="crm-tags-left">
                     <span class="crm-id">#${d.AB}</span>
                     <span class="crm-tag">🏷️ ${d.C || '無產業'}</span>
-                    <span class="crm-tag-r">${rLabel}</span> </div>
+                    <span class="crm-tag-r">${rLabel}</span>
+                </div>
                 <div class="crm-meta-right">
                     <span class="crm-source ${borderClass}">${d.B || '未知來源'}</span>
                     <span class="crm-date">${dateStr}</span>
@@ -230,11 +230,12 @@ function createCardHTML(d) {
             </div>
 
             <div class="action-grid">
-                <a href="${lineLink}" class="action-btn btn-white">💬 加Line</a>
-                <a href="tel:${d.H}" class="action-btn btn-white">📞 撥號</a>
-                ${groupBtn}
+                <a href="${lineLink}" class="action-btn btn-white">💬 Line</a>
+                <a href="tel:${d.H}" class="action-btn btn-white">📞 電話</a>
                 <a href="mailto:${d.I}" class="action-btn btn-white">✉️ Email</a>
-                <button class="action-btn btn-orange" onclick="openEdit('${d.AB}', event)">✏️ 更新</button>
+                
+                <a href="${mapLink}" target="_blank" class="action-btn btn-white">🗺️ 地圖</a>
+                <button class="action-btn btn-orange" onclick="openEdit('${d.AB}', event)">📝 更新</button>
                 <button class="action-btn btn-purple" onclick="openDispatch('${d.AB}', event)">🚀 派單</button>
             </div>
             
