@@ -95,9 +95,10 @@ function renderList() {
 }
 
 function createCardHTML(d) {
+   // 改用膠囊樣式輸出
     const lights = [
         {l:'Line',v:d.L},{l:'已讀',v:d.M},{l:'電話',v:d.N},{l:'撥通',v:d.O},{l:'Email',v:d.Q}
-    ].map(x=>`<div class="status-item"><div class="status-dot ${x.v==='✅'?'on':'off'}"></div><span class="status-label">${x.l}</span></div>`).join('');
+    ].map(x => `<div class="status-pill ${x.v==='✅'?'on':''}">${x.l}</div>`).join('');
     
     const hasGroup = d.S && d.S.startsWith('http');
     const groupBtn = hasGroup 
