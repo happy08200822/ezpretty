@@ -4,11 +4,11 @@
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzIKHpWcWj0bOhaQsx-OynY5FVVorMJvTNON5PBOywj1q-Nd5EylLCSl-zTlFW9Rb5U/exec";
 
 let db = [];
-let appState = { mode: 'undispatched', source: 'ads', filter: 'new' };
-let currentKey = null;
-let selectedAgent = '';
+let appState = { mode: 'undispatched', filter: 'new' }; // 乾淨的狀態，移除 source
 
-// 初始化：透過 fetch 呼叫 GAS
+// ==========================================
+// 1. 初始化與資料處理
+// ==========================================
 function init() {
     document.getElementById('loading-screen').style.display = 'flex';
     
@@ -24,12 +24,11 @@ function init() {
         });
 }
 
-// 資料處理
 function onDataLoaded(data) {
     db = data.map(d => {
-        const srcText = d.B || ""; // 取得 B 欄來源文字
+        const srcText = d.B || ""; 
 
-        // 1. 判斷邊框顏色標籤 (_source)
+        // 🎨 判斷邊框顏色標籤 (對應 CSS)
         if (srcText.includes("公司件")) {
             d._source = "ads";      // 藍色
         } else if (srcText.includes("講座件")) {
@@ -40,7 +39,7 @@ function onDataLoaded(data) {
             d._source = "other";    // 灰色
         }
 
-        // 2. 判斷大分類模式 (_mode)
+        // 🗂️ 判斷大分類模式 (_mode)
         if (srcText.includes("自開件")) {
             d._mode = 'self';
         } else if (d.R && (d.R.includes('無效') || d.R.includes('拒絕'))) {
@@ -51,11 +50,11 @@ function onDataLoaded(data) {
             d._mode = 'undispatched';
         }
         
-        // 3. 判斷第三層狀態過濾 (_status)
+        // 🚦 判斷第三層狀態過濾 (_status)
         if (d._mode === 'undispatched' || d._mode === 'invalid') {
-            const isL = (d.L === '✅');
-            const isM = (d.M === '✅');
-            const isN = (d.N === '✅');
+            const isL = (d.L && d.L.includes('✅'));
+            const isM = (d.M && d.M.includes('✅'));
+            const isN = (d.N && d.N.includes('✅'));
 
             if (!isL && !isN) {
                 d._status = 'new'; 
@@ -75,26 +74,43 @@ function onDataLoaded(data) {
     setMode('undispatched');
 }
 
+// ==========================================
+// 2. 畫面渲染與計數
+// ==========================================
 function updateGlobalCounts() {
     ['undispatched', 'dispatched', 'self', 'invalid'].forEach(m => 
         document.getElementById(`c1-${m}`).innerText = db.filter(d => d._mode === m).length
     );
-    if (appState.mode === 'undispatched' || appState.mode === 'invalid') {
-        document.getElementById('c2-ads').innerText = db.filter(d => d._mode === appState.mode && d._source === 'ads').length;
-        document.getElementById('c2-seminar').innerText = db.filter(d => d._mode === appState.mode && d._source === 'seminar').length;
-    }
 }
 
 function getL3Count(filterKey) {
     return db.filter(d => {
         if (d._mode !== appState.mode) return false;
         if (appState.mode === 'undispatched' || appState.mode === 'invalid') {
-            if (d._source !== appState.source) return false;
             return d._status === filterKey;
         } else {
             return d.U === filterKey;
         }
     }).length;
+}
+
+function renderFilters() { 
+    const c = document.getElementById('filterRow'); 
+    let pills = [];
+    let styleClass = '';
+    
+    if(appState.mode === 'undispatched' || appState.mode === 'invalid') {
+        styleClass = (k) => k==='new'?'pill-new':(k==='unread'?'pill-unread':(k==='read'?'pill-read':''));
+        pills = [{k:'new', t:'🔴 新單'}, {k:'unread', t:'🟡 未讀'}, {k:'read', t:'🟢 已讀'}, {k:'noline', t:'⚪ 沒Line'}];
+    } else {
+        styleClass = () => 'pill-agent';
+        pills = [{k:'Kelvin', t:'👤 Kelvin'}, {k:'David', t:'👤 David'}, {k:'WT', t:'👤 WT'}];
+    }
+    
+    c.innerHTML = pills.map(p => {
+        const count = getL3Count(p.k);
+        return `<div class="filter-pill ${styleClass(p.k)} ${appState.filter===p.k?'active':''}" onclick="setFilter('${p.k}')">${p.t} <span class="count-badge-L3">${count}</span></div>`;
+    }).join('');
 }
 
 function renderList() {
@@ -107,10 +123,9 @@ function renderList() {
             return str.includes(searchTerm);
         }
         if (d._mode !== appState.mode) return false;
+        
         if (appState.mode === 'undispatched' || appState.mode === 'invalid') {
-            if (d._source !== appState.source) return false;
-           // 👇 已經把註解拿掉，正式啟用第三層過濾！
-             if (d._status !== appState.filter) return false; 
+            if (d._status !== appState.filter) return false; 
         } else {
             if (d.U !== appState.filter) return false;
         }
@@ -122,7 +137,6 @@ function renderList() {
 }
 
 function createCardHTML(d) {
-   // 改用膠囊樣式輸出
     const lights = [
         {l:'Line',v:d.L},{l:'已讀',v:d.M},{l:'電話',v:d.N},{l:'撥通',v:d.O},{l:'Email',v:d.Q}
     ].map(x => `<div class="status-pill ${x.v==='✅'?'on':''}">${x.l}</div>`).join('');
@@ -132,7 +146,7 @@ function createCardHTML(d) {
         ? `<a href="${d.S}" target="_blank" class="btn-action btn-success" style="display:block;margin-bottom:8px;text-decoration:none;">💬 開啟群組</a>` 
         : `<button class="btn-action btn-disabled" style="display:block;width:100%;margin-bottom:8px;">🚫 尚未建群</button>`;
     
-    const borderClass = d._source === 'ads' ? 'c-ads' : (d._source === 'seminar' ? 'c-seminar' : 'c-self');
+    const borderClass = `c-${d._source}`; 
     const emailRow = d.I ? `<div class="contact-grid"><div><div class="contact-label">Email</div><div class="contact-val" style="font-size:12px">${d.I}</div></div><a href="mailto:${d.I}" class="btn-action">✉️</a></div>` : '';
     const idDisplay = d.AA ? `<div style="font-size:10px;color:#bbb;text-align:center;margin-top:-6px;margin-bottom:12px;font-family:monospace;">ID: ${d.AA.substring(0,8)}...</div>` : '';
     const dispatchInfo = d.U ? `<div class="dispatch-info"><div style="font-weight:bold; margin-bottom:4px; color:#333;">👤 ${d.U}</div><div>狀態：${d.W||'-'} ｜ 結果：${d.Y||'-'}</div><div class="meta-time">${d.V ? `<div>👉 指派: ${d.V}</div>` : ''}${d.X ? `<div>⏰ 展示: ${d.X}</div>` : ''}</div></div>` : '';
@@ -162,61 +176,51 @@ function createCardHTML(d) {
     </div>`;
 }
 
-// 導航控制
+// ==========================================
+// 3. 導航與互動控制
+// ==========================================
 window.setMode = function(mode) { 
     appState.mode = mode; 
-    if(mode.includes('dispatch')===false) {appState.filter='new'; appState.source='ads';} else {appState.filter='Kelvin';} 
+    if(mode.includes('dispatch') === false) {
+        appState.filter = 'new'; 
+    } else {
+        appState.filter = 'Kelvin';
+    } 
     document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active')); 
     document.querySelector(`.mode-btn[data-mode="${mode}"]`).classList.add('active'); 
-    const r2=document.getElementById('sourceRow'); 
-    if(mode==='undispatched'||mode==='invalid'){r2.classList.add('show'); document.querySelectorAll('.source-tab').forEach(t=>t.classList.remove('active')); document.querySelector('.source-tab[data-src="ads"]').classList.add('active');} 
-    else{r2.classList.remove('show');} 
-    updateGlobalCounts(); renderFilters(); renderList(); 
+    
+    updateGlobalCounts(); 
+    renderFilters(); 
+    renderList(); 
 }
 
-window.setSource = function(src) { 
-    appState.source=src; appState.filter='new'; 
-    document.querySelectorAll('.source-tab').forEach(b=>b.classList.remove('active')); 
-    document.querySelector(`.source-tab[data-src="${src}"]`).classList.add('active'); 
-    updateGlobalCounts(); renderFilters(); renderList(); 
-}
-
-window.setFilter = function(val) { appState.filter=val; renderFilters(); renderList(); }
-
-function renderFilters() { 
-    const c = document.getElementById('filterRow'); 
-    let pills = [];
-    let styleClass = '';
-    if(appState.mode==='undispatched'||appState.mode==='invalid') {
-        styleClass = (k) => k==='new'?'pill-new':(k==='unread'?'pill-unread':(k==='read'?'pill-read':''));
-        pills = [{k:'new', t:'🔴 新單'}, {k:'unread', t:'🟡 未讀'}, {k:'read', t:'🟢 已讀'}, {k:'noline', t:'⚪ 沒Line'}];
-    } else {
-        styleClass = () => 'pill-agent';
-        pills = [{k:'Kelvin', t:'👤 Kelvin'}, {k:'David', t:'👤 David'}, {k:'WT', t:'👤 WT'}];
-    }
-    c.innerHTML = pills.map(p => {
-        const count = getL3Count(p.k);
-        return `<div class="filter-pill ${styleClass(p.k)} ${appState.filter===p.k?'active':''}" onclick="setFilter('${p.k}')">${p.t} <span class="count-badge-L3">${count}</span></div>`;
-    }).join('');
+window.setFilter = function(val) { 
+    appState.filter = val; 
+    renderFilters(); 
+    renderList(); 
 }
 
 window.toggleCard = function(el) { el.classList.toggle('open'); }
 window.handleSearch = function() { renderList(); }
 
-// 編輯面板
+// ==========================================
+// 4. 編輯與派單面板
+// ==========================================
 window.openEdit = function(key, e) {
     e.stopPropagation(); currentKey = key;
     const data = db.find(d => d.AB === key);
     ['L','M','N','O','Q'].forEach(f => {
         const el = document.getElementById('tog-'+f);
-        if(data[f]==='✅') el.classList.add('active'); else el.classList.remove('active');
+        if(data[f] && data[f].includes('✅')) el.classList.add('active'); else el.classList.remove('active');
     });
     document.getElementById('inp-R').value = data.R;
     document.getElementById('history-P').innerText = data.P || '';
     document.getElementById('inp-P-new').value = ''; 
     openSheet('sheet-edit');
 }
+
 window.toggleBtn = function(el) { el.classList.toggle('active'); }
+
 window.insertTime = function() {
     const now = new Date();
     const str = `[ ${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes()} WT ]：`;
@@ -238,7 +242,6 @@ window.saveEdit = function() {
         P: (document.getElementById('history-P').innerText + '\n' + document.getElementById('inp-P-new').value).trim()
     };
     
-    // 透過 fetch 傳送更新請求
     const params = new URLSearchParams({
         action: 'updateClientData',
         key: currentKey,
@@ -250,12 +253,11 @@ window.saveEdit = function() {
         .then(res => {
             alert('✅ 儲存成功');
             closeAllSheets();
-            init(); // 重新載入資料
+            init(); 
         })
         .finally(() => { btn.innerText = "儲存"; btn.disabled = false; });
 }
 
-// 派單面板
 window.openDispatch = function(key, e) {
     e.stopPropagation(); currentKey = key;
     const data = db.find(d => d.AB === key);
@@ -266,11 +268,13 @@ window.openDispatch = function(key, e) {
     document.getElementById('inp-AA').value = data.AA || '';
     openSheet('sheet-dispatch');
 }
+
 window.selectAgent = function(el, name) {
     document.querySelectorAll('.agent-item').forEach(el => el.classList.remove('selected'));
     el.classList.add('selected');
     selectedAgent = name;
 }
+
 window.confirmDispatch = function() {
     if(!currentKey) return;
     const btn = document.getElementById('btn-save-dispatch');
@@ -302,7 +306,9 @@ window.confirmDispatch = function() {
         .finally(() => { btn.innerText = "確認派單"; btn.disabled = false; });
 }
 
-// 群組選擇器
+// ==========================================
+// 5. 群組與工具
+// ==========================================
 window.openGroupSelector = function() {
     document.getElementById('group-list-container').innerText = "連線載入中...";
     openSheet('modal-group');
@@ -319,12 +325,13 @@ window.openGroupSelector = function() {
                 </div>`).join('');
         });
 }
+
 window.selectGroup = function(id) { document.getElementById('inp-AA').value = id; closeGroupSelector(); }
 window.closeGroupSelector = function() { document.getElementById('modal-group').classList.remove('show'); }
 
-// 工具函式
 function openSheet(id) { document.getElementById('overlay').classList.add('show'); document.getElementById(id).classList.add('show'); }
 window.closeAllSheets = function() { document.getElementById('overlay').classList.remove('show'); document.querySelectorAll('.bottom-sheet').forEach(el => el.classList.remove('show')); closeGroupSelector(); }
+
 window.handleAddLine = function(lineId, phone, e) {
     e.stopPropagation();
     if (lineId && lineId.length > 1) { window.location.href = `https://line.me/ti/p/~${lineId}`; } 
@@ -335,5 +342,7 @@ window.handleAddLine = function(lineId, phone, e) {
     } else { alert('無 LINE ID 也無電話'); }
 }
 
-// 啟動
+// ==========================================
+// 6. 啟動程式
+// ==========================================
 init();
