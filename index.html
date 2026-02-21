@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fold 7 戰情室</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="loading-overlay" id="loading-screen">
+    <div class="spinner"></div>
+    <div>資料連線中...</div>
+  </div>
+
+  <div class="header-container">
+    <div class="search-bar">
+      <input type="text" class="search-input" id="search-input" placeholder="🔍 搜尋店名、電話..." onkeyup="handleSearch()">
+      <div class="btn-icon" onclick="init()">🔄</div>
+    </div>
+    <div class="level-1-wrapper">
+      <div class="mode-btn active" data-mode="undispatched" onclick="setMode('undispatched')">📂 未派單 <span class="count-badge-L1" id="c1-undispatched">0</span></div>
+      <div class="mode-btn" data-mode="dispatched" onclick="setMode('dispatched')">🚀 已派單 <span class="count-badge-L1" id="c1-dispatched">0</span></div>
+      <div class="mode-btn" data-mode="self" onclick="setMode('self')">🏢 自開件 <span class="count-badge-L1" id="c1-self">0</span></div>
+      <div class="mode-btn" data-mode="invalid" onclick="setMode('invalid')">🗑️ 無效單 <span class="count-badge-L1" id="c1-invalid">0</span></div>
+    </div>
+    <div class="level-2-wrapper" id="sourceRow">
+      <div class="source-tab active" data-src="ads" onclick="setSource('ads')">📢 廣告件 <span class="count-badge-L2" id="c2-ads">0</span></div>
+      <div class="source-tab" data-src="seminar" onclick="setSource('seminar')">🎤 講座件 <span class="count-badge-L2" id="c2-seminar">0</span></div>
+    </div>
+    <div class="level-3-wrapper" id="filterRow"></div>
+  </div>
+
+  <div class="list-area" id="list"></div>
+
+  <div class="overlay" id="overlay" onclick="closeAllSheets()"></div>
+
+  <div class="bottom-sheet" id="sheet-edit">
+    <div class="sheet-header"><div class="sheet-title">✏️ 更新進度</div><div class="sheet-close" onclick="closeAllSheets()">×</div></div>
+    <div class="sheet-body">
+        <div class="input-label">通訊狀態</div>
+        <div class="toggle-grid">
+            <div class="toggle-btn" id="tog-L" onclick="toggleBtn(this)"><div class="toggle-icon">💬</div><div class="toggle-text">Line</div></div>
+            <div class="toggle-btn" id="tog-M" onclick="toggleBtn(this)"><div class="toggle-icon">👀</div><div class="toggle-text">已讀</div></div>
+            <div class="toggle-btn" id="tog-N" onclick="toggleBtn(this)"><div class="toggle-icon">📞</div><div class="toggle-text">撥電話</div></div>
+            <div class="toggle-btn" id="tog-O" onclick="toggleBtn(this)"><div class="toggle-icon">🗣️</div><div class="toggle-text">撥通</div></div>
+            <div class="toggle-btn" id="tog-Q" onclick="toggleBtn(this)"><div class="toggle-icon">✉️</div><div class="toggle-text">Email</div></div>
+        </div>
+        <div class="input-group">
+            <label class="input-label">新單追蹤進度 (R)</label>
+            <select class="sheet-select" id="inp-R">
+                <option value="聯絡中">🟡 聯絡中</option>
+                <option value="無效單">⚫ 無效單</option>
+            </select>
+        </div>
+        <div class="input-group">
+            <label class="input-label">詳細紀錄 (P)</label>
+            <div class="history-log" id="history-P"></div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label class="input-label">新增紀錄</label>
+                <button class="btn-insert-time" onclick="insertTime()">📅 插入時間</button>
+            </div>
+            <textarea class="sheet-textarea" id="inp-P-new" placeholder="輸入紀錄..."></textarea>
+        </div>
+    </div>
+    <div class="sheet-footer"><button class="btn-full btn-cancel" onclick="closeAllSheets()">取消</button><button class="btn-full btn-save" id="btn-save-edit" onclick="saveEdit()">儲存</button></div>
+  </div>
+
+  <div class="bottom-sheet" id="sheet-dispatch">
+    <div class="sheet-header"><div class="sheet-title">🚀 派單與建群</div><div class="sheet-close" onclick="closeAllSheets()">×</div></div>
+    <div class="sheet-body">
+        <div class="input-label" style="margin-bottom:8px;">選擇負責業務 (U)</div>
+        <div class="agent-grid">
+            <div class="agent-item" onclick="selectAgent(this, 'Kelvin')"><div class="agent-avatar" style="background:#e1bee7; color:#6a1b9a;">K</div><div class="agent-name">Kelvin</div></div>
+            <div class="agent-item" onclick="selectAgent(this, 'David')"><div class="agent-avatar" style="background:#bbdefb; color:#1565c0;">D</div><div class="agent-name">David</div></div>
+            <div class="agent-item" onclick="selectAgent(this, 'WT')"><div class="agent-avatar" style="background:#c8e6c9; color:#2e7d32;">WT</div><div class="agent-name">WT</div></div>
+        </div>
+        <div class="input-group"><label class="input-label">備註 (T)</label><textarea class="sheet-textarea" id="inp-T" style="height:60px;"></textarea></div>
+        <hr style="border:0; border-top:1px dashed #eee; margin:20px 0;">
+        <div class="group-selector-btn" onclick="openGroupSelector()">🔗 選擇最近群組 (AA)</div>
+        <div class="input-group"><label class="input-label">群組 ID (AA)</label><input type="text" class="sheet-input" id="inp-AA" readonly style="background:#f5f5f5;"></div>
+        <div class="input-group"><label class="input-label">群組連結 (S)</label><input type="text" class="sheet-input" id="inp-S"></div>
+    </div>
+    <div class="sheet-footer"><button class="btn-full btn-cancel" onclick="closeAllSheets()">取消</button><button class="btn-full btn-save" id="btn-save-dispatch" style="background:#9c27b0;" onclick="confirmDispatch()">確認派單</button></div>
+  </div>
+
+  <div class="modal-group" id="modal-group">
+      <div class="modal-header">最近加入的群組</div>
+      <div class="group-list" id="group-list-container">載入中...</div>
+      <div style="padding:10px; text-align:center;"><button class="btn-action" onclick="closeGroupSelector()">關閉</button></div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
