@@ -39,7 +39,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helve
 .card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 16px; overflow: hidden; position: relative; transition: all 0.2s ease; }
 .card.open { box-shadow: 0 8px 20px rgba(0,0,0,0.12); z-index: 10; border: 1px solid #007bff55; }
 .card-border { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
-.c-ads { background: #007bff; } .c-seminar { background: #ff9800; } .c-self { background: #009688; }
+.card-border.c-ads { background: #007bff; }     /* 藍色：公司件系列 */
+.card-border.c-seminar { background: #8B4513; } /* 咖啡色：講座件 */
+.card-border.c-self { background: #009688; }    /* 綠色：自開件系列 */
+.card-border.c-other { background: #9e9e9e; }   /* 灰色：其他 */
 
 .card-summary { padding: 12px 12px 12px 18px; cursor: pointer; }
 /* --- 1. 標題與編號自適應 --- */
