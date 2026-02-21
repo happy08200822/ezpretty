@@ -258,12 +258,15 @@ window.copyText = function(text) {
 // ==========================================
 window.setMode = function(mode) { 
     appState.mode = mode; 
-    if(mode.includes('dispatch') === false) {
-        appState.filter = 'new'; 
+    
+    // 🚨 修正：精準判斷是否為「已派單 (dispatched)」，解決單字包含的誤判
+    if (mode === 'dispatched') {
+        appState.filter = 'Kelvin'; 
     } else {
-        appState.filter = 'Kelvin';
+        appState.filter = 'new'; 
     } 
-    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active')); 
+    
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); 
     document.querySelector(`.mode-btn[data-mode="${mode}"]`).classList.add('active'); 
     
     updateGlobalCounts(); 
