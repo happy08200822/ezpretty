@@ -1,7 +1,7 @@
 // js/main.js
 
 // 🚨 請換成你剛剛重新部署的 GAS 網址 🚨
-const GAS_URL = "https://script.google.com/macros/s/你的網址/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzIKHpWcWj0bOhaQsx-OynY5FVVorMJvTNON5PBOywj1q-Nd5EylLCSl-zTlFW9Rb5U/exec";
 
 let db = [];
 let appState = { mode: 'undispatched', source: 'ads', filter: 'new' };
