@@ -35,10 +35,20 @@ function onDataLoaded(data) {
         else d._mode = 'undispatched';
         
         if (d._mode === 'undispatched' || d._mode === 'invalid') {
-            if(d.L === '❌' && d.N === '❌') d._status = 'new';
-            else if(d.R === '找不到ID') d._status = 'noline';
-            else if(d.M === '❌') d._status = 'unread';
-            else d._status = 'read';
+            // 防呆判斷：只要不是 ✅ (例如空白、❌、FALSE)，都視為 false
+            const isL = (d.L === '✅');
+            const isM = (d.M === '✅');
+            const isN = (d.N === '✅');
+
+            if (!isL && !isN) {
+                d._status = 'new'; // 沒加Line也沒打電話 ➔ 新單
+            } else if (d.R && d.R.includes('找不到ID')) {
+                d._status = 'noline'; // 進度寫找不到ID ➔ 沒Line
+            } else if (isL && !isM) {
+                d._status = 'unread'; // 有加Line但沒已讀 ➔ 未讀
+            } else {
+                d._status = 'read'; // 其他 (已讀、或是有打電話) ➔ 已讀
+            }
         }
         return d;
     });
@@ -82,8 +92,8 @@ function renderList() {
         if (d._mode !== appState.mode) return false;
         if (appState.mode === 'undispatched' || appState.mode === 'invalid') {
             if (d._source !== appState.source) return false;
-            // 暫時不過濾狀態以顯示更多資料
-            // if (d._status !== appState.filter) return false; 
+           // 👇 已經把註解拿掉，正式啟用第三層過濾！
+             if (d._status !== appState.filter) return false; 
         } else {
             if (d.U !== appState.filter) return false;
         }
