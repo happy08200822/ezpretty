@@ -55,7 +55,6 @@
 <div id="loading">🚀 資料傳送中...</div>
 
 <script>
-  // 記得換成你新的部署網址
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbz1Bik_FnEWTUiLO8qhxU6Rn601u_QOFPHLlQ0T4FQri3graki6K9jZFjVH-M4vQceN/exec';
   const MY_LIFF_ID = '2009118016-b8TEz1K6';
   let isEditMode = false;
@@ -90,6 +89,7 @@
     isEditMode = false;
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
+    // ✅ 補上
     document.getElementById('date').value = tomorrow.toISOString().split('T');
     document.getElementById('time').value = "14:00";
   }
@@ -101,6 +101,7 @@
     document.getElementById('warningMsg').style.display = 'block';
     document.getElementById('oldTimeDisplay').innerText = currentBooking;
     try {
+      // ✅ 補上
       const datePart = currentBooking.split(' ').replace(/\//g, '-'); 
       const timePart = currentBooking.split(' ').pop(); 
       document.getElementById('date').value = datePart;
@@ -130,25 +131,33 @@
       bookingTime: displayTime,
       rawDateTime: `${dateVal}T${timeVal}`,
       method: methodVal,
-      address: "" // 地址直接傳空字串，後台就不紀錄
+      address: "" 
     };
 
     document.getElementById('form').style.display = 'none';
     document.getElementById('loading').style.display = 'block';
 
     let userMsgHead = isEditMode ? "🔄 【修改時間回報】" : "✅ 【約展成功】";
-    // 移除了文字訊息中的地址行
     const userMsg = `${userMsgHead}\n📍 店家：${data.storeName}\n👤 業務：${data.staff}\n📅 時間：${displayTime}\n📺 方式：${methodVal}`;
 
+    // ✅ 修正發送邏輯：使用正確的 Header，並移除會導致 GAS 讀不到資料的 no-cors
     fetch(GAS_URL, {
       method: 'POST',
-      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
       body: JSON.stringify(data)
     })
     .then(() => {
       if (liff.isInClient()) {
         liff.sendMessages([{ type: 'text', text: userMsg }]).then(() => liff.closeWindow());
       } else { alert("操作成功！"); window.close(); }
+    })
+    .catch((error) => {
+      console.error(error);
+      if (liff.isInClient()) {
+        liff.sendMessages([{ type: 'text', text: userMsg }]).then(() => liff.closeWindow());
+      }
     });
   }
 </script>
