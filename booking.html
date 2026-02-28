@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📅 設定展示時間</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 20px; background-color: #f8f9fa; }
+    .container { background: white; padding: 25px; border-radius: 12px; max-width: 500px; margin: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    h2 { color: #F7B500; text-align: center; margin-bottom: 20px; }
+    label { display: block; font-weight: bold; margin: 15px 0 5px; color: #333; }
+    input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; margin-bottom: 10px; }
+    button { width: 100%; background: #ccc; color: white; border: none; padding: 15px; border-radius: 10px; font-size: 18px; margin-top: 30px; font-weight: bold; cursor: not-allowed; transition: 0.2s; }
+    button.active { background: #F7B500; cursor: pointer; }
+    .warning-box { display: none; background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 0.95rem; }
+    .warning-highlight { color: #d9534f; font-weight: bold; }
+    .readonly { background: #eee; color: #555; cursor: not-allowed; }
+    #loading { display:none; text-align:center; margin-top:20px; color: #666; font-weight: bold; }
+    #syncOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; z-index: 999; flex-direction: column; }
+  </style>
+</head>
+<body>
+
+<div id="syncOverlay">
+  <div style="font-size: 24px; margin-bottom: 10px;">🔄</div>
+  <div>正在同步最新預約狀態...</div>
+</div>
+
+<div class="container" id="form" style="display:none;"> 
+  <h2 id="pageTitle">📅 設定展示時間</h2>
+  
+  <div id="warningMsg" class="warning-box">
+    ⚠️ 注意：此店家目前已預約 <span id="oldTimeDisplay" class="warning-highlight"></span>，確定要修改嗎？
+  </div>
+
+  <label>店家名稱</label>
+  <input id="storeName" class="readonly" readonly value="讀取中...">
+  
+  <label>日期</label>
+  <input type="date" id="date">
+  
+  <label>時間</label>
+  <input type="time" id="time">
+
+  <label>展示方式</label>
+  <select id="method">
+    <option value="線上">線上展示 (Google Meet)</option>
+    <option value="現場">現場展示 (親訪門市)</option>
+  </select>
+
+  <button onclick="submitData()" id="submitBtn" disabled>確認預約</button>
+</div>
+
+<div id="loading">🚀 資料傳送中...</div>
+
+<script>
+  // 記得換成你新的部署網址
+  const GAS_URL = '你的_GAS_WEB_APP_URL';
+  const MY_LIFF_ID = '2009118016-b8TEz1K6';
+  let isEditMode = false;
+
+  window.onload = async function() {
+    const params = new URLSearchParams(window.location.search);
+    const key = params.get('key');
+    const store = params.get('store');
+    
+    document.getElementById('storeName').value = store ? decodeURIComponent(store) : "無店家資料";
+
+    if (key) {
+      try {
+        const response = await fetch(`${GAS_URL}?action=getBookingStatus&key=${key}`);
+        const result = await response.json();
+        if (result.status === 'booked') enableEditMode(result.time);
+        else enableNewMode();
+      } catch (e) { enableNewMode(); }
+    } else { enableNewMode(); }
+    
+    document.getElementById('syncOverlay').style.display = 'none';
+    document.getElementById('form').style.display = 'block';
+    
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = false;
+    btn.classList.add('active');
+    btn.style.backgroundColor = isEditMode ? "#1E90FF" : "#F7B500";
+    initLiff();
+  };
+
+  function enableNewMode() {
+    isEditMode = false;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('date').value = tomorrow.toISOString().split('T');
+    document.getElementById('time').value = "14:00";
+  }
+
+  function enableEditMode(currentBooking) {
+    isEditMode = true;
+    document.getElementById('pageTitle').innerText = "🔄 修改展示時間";
+    document.getElementById('submitBtn').innerText = "確認修改";
+    document.getElementById('warningMsg').style.display = 'block';
+    document.getElementById('oldTimeDisplay').innerText = currentBooking;
+    try {
+      const datePart = currentBooking.split(' ').replace(/\//g, '-'); 
+      const timePart = currentBooking.split(' ').pop(); 
+      document.getElementById('date').value = datePart;
+      document.getElementById('time').value = timePart;
+    } catch (e) {}
+  }
+
+  async function initLiff() { try { await liff.init({ liffId: MY_LIFF_ID }); } catch (err) {} }
+
+  function submitData() {
+    const dateVal = document.getElementById('date').value;
+    const timeVal = document.getElementById('time').value;
+    const methodVal = document.getElementById('method').value;
+    
+    if (!dateVal || !timeVal) { alert("請填寫時間！"); return; }
+
+    const params = new URLSearchParams(window.location.search);
+    const d = new Date(dateVal);
+    const days = ['日', '一', '二', '三', '四', '五', '六'];
+    const displayTime = `${dateVal.replace(/-/g, '/')} (${days[d.getDay()]}) ${timeVal}`;
+
+    const data = {
+      action: 'receiveBookingData', 
+      key: params.get('key'),
+      storeName: document.getElementById('storeName').value,
+      staff: decodeURIComponent(params.get('staff') || "業務"),
+      bookingTime: displayTime,
+      rawDateTime: `${dateVal}T${timeVal}`,
+      method: methodVal,
+      address: "" // 地址直接傳空字串，後台就不紀錄
+    };
+
+    document.getElementById('form').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+
+    let userMsgHead = isEditMode ? "🔄 【修改時間回報】" : "✅ 【約展成功】";
+    // 移除了文字訊息中的地址行
+    const userMsg = `${userMsgHead}\n📍 店家：${data.storeName}\n👤 業務：${data.staff}\n📅 時間：${displayTime}\n📺 方式：${methodVal}`;
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify(data)
+    })
+    .then(() => {
+      if (liff.isInClient()) {
+        liff.sendMessages([{ type: 'text', text: userMsg }]).then(() => liff.closeWindow());
+      } else { alert("操作成功！"); window.close(); }
+    });
+  }
+</script>
+</body>
+</html>
