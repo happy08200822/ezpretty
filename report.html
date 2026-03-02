@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✅ 展示回報系統</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: -apple-system, sans-serif; padding: 15px; background-color: #f0f2f5; }
+    .container { background: white; padding: 20px; border-radius: 15px; max-width: 450px; margin: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+    h2 { color: #f2994a; text-align: center; margin-top: 0; }
+    .section-label { display: block; font-weight: 700; margin: 15px 0 8px; font-size: 14px; color: #606770; }
+    input, select, textarea { width: 100%; padding: 12px; border: 1px solid #dddfe2; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+    .readonly { background: #f5f6f7; color: #8d949e; font-weight: bold; }
+    
+    /* 下拉選單配色對齊截圖 */
+    select option[value="展示完，意願度高"] { background-color: #FFD2D2; }
+    select option[value="展示完，意願度中"] { background-color: #FFD9B1; }
+    select option[value="展示完，意願度低"] { background-color: #FFF2B2; }
+    select option[value="已拒絕"] { background-color: #E0E0E0; }
+    select option[value="成交"] { background-color: #B22222; color: white; }
+
+    button { width: 100%; background: #f2994a; color: white; border: none; padding: 16px; border-radius: 10px; font-size: 18px; margin-top: 25px; font-weight: bold; cursor: pointer; }
+    button:disabled { background: #ccc; }
+    #loading { display:none; text-align:center; padding: 20px; }
+  </style>
+</head>
+<body>
+
+<div class="container" id="formContent">
+  <h2>✅ 店家展示回報</h2>
+  
+  <span class="section-label">📍 店家名稱</span>
+  <input id="storeName" class="readonly" readonly value="讀取中...">
+  
+  <span class="section-label">🎯 處理狀態</span>
+  <select id="intent">
+    <option value="展示完，意願度高">🔴 展示完，意願度高</option>
+    <option value="展示完，意願度中">🟠 展示完，意願度中</option>
+    <option value="展示完，意願度低">🟡 展示完，意願度低</option>
+    <option value="已拒絕">⚪ 已拒絕</option>
+    <option value="成交">🉐 成交</option>
+  </select>
+
+  <span class="section-label">📝 展示心得 (詳細備註)</span>
+  <textarea id="result" rows="5" placeholder="請輸入本次展示的詳細狀況..."></textarea>
+
+  <button id="submitBtn" onclick="submitData()">確認送出回報</button>
+</div>
+
+<div id="loading">🚀 正在更新戰情室數據...</div>
+
+<script>
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbz1Bik_FnEWTUiLO8qhxU6Rn601u_QOFPHLlQ0T4FQri3graki6K9jZFjVH-M4vQceN/exec'; 
+  const MY_LIFF_ID = '2009119070-OxP3GJTq';
+  let currentKey = "";
+
+  window.onload = function() {
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById('storeName').value = decodeURIComponent(params.get('store') || "未指定店家");
+    currentKey = params.get('key') || "";
+    liff.init({ liffId: MY_LIFF_ID });
+  };
+
+  async function submitData() {
+    const resultVal = document.getElementById('result').value;
+    const btn = document.getElementById('submitBtn');
+    
+    if (!resultVal) { alert("請輸入心得備註！"); return; }
+    
+    btn.disabled = true;
+    document.getElementById('formContent').style.opacity = "0.3";
+    document.getElementById('loading').style.display = "block";
+
+    let userName = "業務";
+    try {
+      if (liff.isLoggedIn()) {
+        const profile = await liff.getProfile();
+        userName = profile.displayName;
+      }
+    } catch (e) {}
+
+    const payload = {
+      action: 'receiveReportData',
+      key: currentKey,
+      storeName: document.getElementById('storeName').value,
+      intent: document.getElementById('intent').value,
+      result: resultVal,
+      staff: userName
+    };
+
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      mode: 'no-cors'
+    }).then(() => {
+      const msg = `🎊【 展示回報完成 】🎊\n━━━━━━━━━━━━━━\n📍 店家：${payload.storeName}\n👤 業務：${userName}\n📊 狀態：${payload.intent}\n📝 備註：${resultVal}\n━━━━━━━━━━━━━━`;
+      if (liff.isInClient()) {
+        liff.sendMessages([{ type: 'text', text: msg }]).then(() => liff.closeWindow());
+      } else {
+        alert("回報成功！");
+        window.close();
+      }
+    });
+  }
+</script>
+</body>
+</html>
