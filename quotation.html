@@ -40,9 +40,13 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 opacity-80 relative">
       <h3 class="text-gray-500 font-bold">1️⃣ 官網標準一年方案</h3>
       <div class="mt-3 flex items-end">
-        <span class="text-2xl font-black text-gray-700">$39,000</span>
+        <span class="text-2xl font-black text-gray-700" id="oneYearTotalDisplay">$39,000</span>
       </div>
-      <p class="text-xs text-gray-400 mt-1">包含：系統費 $30,000 + 設定費 $9,000</p>
+      <p class="text-xs text-gray-400 mt-1" id="oneYearDetailDisplay">包含：系統費 $30,000 + 設定費 $9,000</p>
+      <ul class="text-sm text-gray-500 mt-3 space-y-1">
+        <li id="oneYearUsersDisplay">• 使用人數：2~5人</li>
+        <li>• 無額外加贈月份</li>
+      </ul>
     </div>
 
     <div class="bg-white rounded-xl shadow-lg border-2 border-green-500 p-5 mb-8 relative transform scale-105">
@@ -52,14 +56,15 @@
       <h3 class="text-green-700 font-bold text-lg">2️⃣ 專屬陪跑兩年方案</h3>
       <div class="mt-2 flex items-end">
         <span class="text-3xl font-black text-gray-800" id="priceDisplay">$60,000</span>
-        <span class="text-xs text-gray-500 ml-2 mb-1 line-through">原價 $69,000</span>
+        <span class="text-xs text-gray-500 ml-2 mb-1 line-through" id="twoYearOriginalDisplay">原價 $69,000</span>
       </div>
-      <p class="text-sm font-bold text-green-600 mt-1 bg-green-50 inline-block px-2 py-1 rounded">💡 現省 $9,000 設定費！</p>
+      <p class="text-sm font-bold text-green-600 mt-1 bg-green-50 inline-block px-2 py-1 rounded" id="twoYearSaveDisplay">💡 現省 $9,000 設定費！</p>
       
       <div class="mt-4 pt-4 border-t border-gray-100">
         <p class="text-sm font-bold text-gray-700 mb-2">🎁 本方案專屬三大權益：</p>
         <ul class="text-sm text-gray-600 space-y-2">
-          <li class="flex items-start"><span class="mr-2">✅</span><span><strong>免設定費：</strong>現省 9,000 元。</span></li>
+          <li class="flex items-start" id="twoYearUsersDisplay"><span class="mr-2">✅</span><span><strong>使用人數：</strong>2~5人</span></li>
+          <li class="flex items-start" id="twoYearSaveListDisplay"><span class="mr-2">✅</span><span><strong>免設定費：</strong>現省 9,000 元。</span></li>
           <li class="flex items-start"><span class="mr-2">✅</span><span><strong>早鳥加碼：</strong>7日內決定，<span class="text-red-500 font-bold">多送 2 個月</span>。</span></li>
           <li class="flex items-start"><span class="mr-2">✅</span><span><strong>政府補助：</strong>協助申請，通過<span class="text-green-600 font-bold">再送 1 年</span>。</span></li>
         </ul>
@@ -158,14 +163,11 @@
     // 2. LIFF 初始化與抓取頭像/名稱
     async function initializeLiff() {
       try {
-        // ⚠️⚠️⚠️ 請一定要把下面的字換成你的真實 LIFF ID ⚠️⚠️⚠️
         await liff.init({ liffId: "2009451507-efJP6NMG" });
 
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
-          // 將抓到的名字填入畫面
           document.getElementById('userNameDisplay').innerText = profile.displayName;
-          // 將抓到的頭像網址塞進圖片，並顯示圖片
           if (profile.pictureUrl) {
             const picImg = document.getElementById('userPicture');
             picImg.src = profile.pictureUrl;
@@ -177,22 +179,41 @@
       }
     }
 
-    // 3. 抓取網址參數 (店名、金額、天數)
+    // 3. 抓取網址參數與動態算數
     function handleUrlParams() {
       const urlParams = new URLSearchParams(window.location.search);
       const store = urlParams.get('store');
       const price = urlParams.get('price');
       const days = urlParams.get('days');
+      // 💡 抓取設定費與人數參數
+      const setupFee = urlParams.get('setupFee');
+      const usersText = urlParams.get('users') || "1人";
 
       if(store) document.getElementById('storeNameSub').innerText = "為 " + store + " 量身打造";
-      if(price) {
-        let cleanPrice = price.replace(/[^\d]/g, "");
-        systemBasePrice = parseInt(cleanPrice) || 60000;
-        document.getElementById('priceDisplay').innerText = "$" + systemBasePrice.toLocaleString();
-      }
       if(days) document.getElementById('daysLeftDisplay').innerText = days + " 天";
 
-      // 參數設定好後，先跑一次試算器計算
+      // 💡 數學神仙邏輯：動態推算所有數字
+      let twoYearPriceNum = price ? parseInt(price.replace(/[^\d]/g, "")) : 60000;
+      let setupFeeNum = setupFee ? parseInt(setupFee.replace(/[^\d]/g, "")) : 9000;
+      
+      let oneYearSystemPrice = twoYearPriceNum / 2; // 一年系統費 = 兩年總價一半
+      let oneYearTotal = oneYearSystemPrice + setupFeeNum; // 一年總費用
+      let twoYearOriginal = twoYearPriceNum + setupFeeNum; // 兩年原價 = 兩年總價+設定費
+
+      // 👉 動態渲染一年方案區塊
+      document.getElementById('oneYearTotalDisplay').innerText = "$" + oneYearTotal.toLocaleString();
+      document.getElementById('oneYearDetailDisplay').innerText = `包含：系統費 $${oneYearSystemPrice.toLocaleString()} + 設定費 $${setupFeeNum.toLocaleString()}`;
+      document.getElementById('oneYearUsersDisplay').innerText = `• 使用人數：${usersText}`;
+
+      // 👉 動態渲染兩年方案區塊
+      document.getElementById('priceDisplay').innerText = "$" + twoYearPriceNum.toLocaleString();
+      document.getElementById('twoYearOriginalDisplay').innerText = `原價 $${twoYearOriginal.toLocaleString()}`;
+      document.getElementById('twoYearSaveDisplay').innerText = `💡 現省 $${setupFeeNum.toLocaleString()} 設定費，平均一年只要 $${oneYearSystemPrice.toLocaleString()}！`;
+      document.getElementById('twoYearUsersDisplay').innerHTML = `<span class="mr-2">✅</span><span><strong>使用人數：</strong>${usersText}</span>`;
+      document.getElementById('twoYearSaveListDisplay').innerHTML = `<span class="mr-2">✅</span><span><strong>免設定費：</strong>現省 ${setupFeeNum.toLocaleString()} 元。</span>`;
+
+      // 參數設定好後，更新試算表基底並算一次試算器
+      systemBasePrice = twoYearPriceNum;
       calculateROI();
     }
 
