@@ -167,20 +167,20 @@
       }
     };
 
-    // 🚀 [新增] 2. 負責發送通知訊號給 GAS 的函數
-    async function notifySales(store, user) {
-      // ⚠️⚠️⚠️ 這裡要換成你剛才 GAS 部署產生的「網頁應用程式 URL」
+   // 🚀 [修改] 2. 負責發送通知訊號給 GAS 的函數 (加入 userId)
+    async function notifySales(store, user, uid) {
       const gasWebUrl = "https://script.google.com/macros/s/AKfycbz1Bik_FnEWTUiLO8qhxU6Rn601u_QOFPHLlQ0T4FQri3graki6K9jZFjVH-M4vQceN/exec"; 
       
       try {
         await fetch(gasWebUrl, {
           method: 'POST',
-          mode: 'no-cors', // 避免瀏覽器擋下跨網域請求
+          mode: 'no-cors',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            action: 'notifyQuotationOpened', // 呼叫 GAS 裡新增的那段攔截器
+            action: 'notifyQuotationOpened',
             storeName: store,
-            userName: user
+            userName: user,
+            userId: uid // 💡 把真實的 LINE ID 傳給 GAS 進行白名單比對
           })
         });
       } catch (err) {
@@ -202,10 +202,10 @@
             picImg.classList.remove('hidden');
           }
 
-          // 🚀 [新增] 抓到名字後，偷偷發送通知給業務群組！
+          // 🚀 [修改] 抓到資料後，把 store, 名字, 和 LINE ID 都傳遞過去
           const urlParams = new URLSearchParams(window.location.search);
           const store = urlParams.get('store') || "未知店家";
-          notifySales(store, profile.displayName);
+          notifySales(store, profile.displayName, profile.userId);
 
         }
       } catch (err) {
