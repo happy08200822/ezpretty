@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ezpretty 專屬數位轉型提案</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: 'Helvetica Neue', Arial, '微軟正黑體', sans-serif; }
     ::-webkit-scrollbar { display: none; }
@@ -12,11 +13,13 @@
 </head>
 <body class="bg-gray-50 pb-24 text-gray-800">
 
-  <div class="relative bg-cover bg-center h-48" style="background-image: url('https://images.unsplash.com/photo-1522337660859-02fbefca4702?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');">
-    <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+  <div class="relative bg-cover bg-center h-56" style="background-image: url('https://images.unsplash.com/photo-1522337660859-02fbefca4702?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');">
+    <div class="absolute inset-0 bg-black bg-opacity-60"></div>
     <div class="absolute inset-0 flex flex-col items-center justify-center text-white px-4 text-center">
+      <img id="userPicture" src="" class="w-16 h-16 rounded-full border-2 border-white mb-3 shadow-lg hidden">
       <p class="text-sm tracking-widest uppercase mb-1 opacity-80">專屬數位轉型提案</p>
-      <h1 class="text-2xl font-bold tracking-wide" id="storeNameDisplay">貴賓 您好</h1>
+      <h1 class="text-xl font-bold tracking-wide"><span id="userNameDisplay">貴賓</span> 您好</h1>
+      <p class="text-xs mt-2 opacity-70" id="storeNameSub">為您的店鋪量身打造</p>
     </div>
   </div>
 
@@ -121,15 +124,14 @@
   </div>
 
   <script>
-    // 全域變數儲存系統報價 (預設 6萬)
     let systemBasePrice = 60000;
 
-    // 計算投資回報的函數
+    // 1. 投資回報計算邏輯
     window.calculateROI = function() {
       const ticket = parseInt(document.getElementById('calcTicket').value) || 0;
       const saved = parseInt(document.getElementById('calcSaved').value) || 0;
-      
       const monthlyReturn = ticket * saved;
+      
       document.getElementById('monthlySavedVal').innerText = monthlyReturn.toLocaleString();
       
       const paybackEl = document.getElementById('monthsToPayback');
@@ -139,7 +141,6 @@
         const payback = (systemBasePrice / monthlyReturn).toFixed(1);
         paybackEl.innerText = payback;
         
-        // 根據回本時間給出不同鼓勵話語
         if(payback <= 6) {
           msgEl.innerText = "💡 太划算了！不到半年就回本，剩下的時間都是純利潤！";
           paybackEl.className = "text-2xl font-black text-green-600";
@@ -154,22 +155,51 @@
       }
     };
 
-    document.addEventListener("DOMContentLoaded", function() {
+    // 2. LIFF 初始化與抓取頭像/名稱
+    async function initializeLiff() {
+      try {
+        // ⚠️⚠️⚠️ 請一定要把下面的字換成你的真實 LIFF ID ⚠️⚠️⚠️
+        await liff.init({ liffId: "請在此填入你的LIFF_ID" });
+
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          // 將抓到的名字填入畫面
+          document.getElementById('userNameDisplay').innerText = profile.displayName;
+          // 將抓到的頭像網址塞進圖片，並顯示圖片
+          if (profile.pictureUrl) {
+            const picImg = document.getElementById('userPicture');
+            picImg.src = profile.pictureUrl;
+            picImg.classList.remove('hidden');
+          }
+        }
+      } catch (err) {
+        console.error("LIFF 初始化失敗", err);
+      }
+    }
+
+    // 3. 抓取網址參數 (店名、金額、天數)
+    function handleUrlParams() {
       const urlParams = new URLSearchParams(window.location.search);
       const store = urlParams.get('store');
       const price = urlParams.get('price');
       const days = urlParams.get('days');
 
-      if(store) document.getElementById('storeNameDisplay').innerText = store + " 您好";
+      if(store) document.getElementById('storeNameSub').innerText = "為 " + store + " 量身打造";
       if(price) {
         let cleanPrice = price.replace(/[^\d]/g, "");
-        systemBasePrice = parseInt(cleanPrice) || 60000; // 更新給試算器用的基底金額
+        systemBasePrice = parseInt(cleanPrice) || 60000;
         document.getElementById('priceDisplay').innerText = "$" + systemBasePrice.toLocaleString();
       }
       if(days) document.getElementById('daysLeftDisplay').innerText = days + " 天";
 
-      // 畫面載入時先算一次預設值
+      // 參數設定好後，先跑一次試算器計算
       calculateROI();
+    }
+
+    // 當網頁載入完成時，啟動所有功能
+    document.addEventListener("DOMContentLoaded", function() {
+      handleUrlParams();
+      initializeLiff();
     });
   </script>
 </body>
