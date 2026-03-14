@@ -91,7 +91,11 @@
           <span class="text-sm text-gray-600 font-bold">每月自動多賺：</span>
           <span class="text-lg font-black text-yellow-600">$<span id="monthlySavedVal">15,000</span></span>
         </div>
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center mb-2 border-b border-yellow-200 pb-2">
+          <span class="text-sm text-gray-600 font-bold">一年幫您多賺：</span>
+          <span class="text-xl font-black text-red-500">$<span id="yearlySavedVal">180,000</span></span>
+        </div>
+        <div class="flex justify-between items-center pt-1">
           <span class="text-sm text-gray-600 font-bold">預計回本時間：</span>
           <span class="text-2xl font-black text-green-600"><span id="monthsToPayback">4.0</span> 個月</span>
         </div>
@@ -131,13 +135,16 @@
  <script>
     let systemBasePrice = 60000;
 
-    // 1. 投資回報計算邏輯 (完全沒動)
+    // 1. 投資回報計算邏輯
     window.calculateROI = function() {
       const ticket = parseInt(document.getElementById('calcTicket').value) || 0;
       const saved = parseInt(document.getElementById('calcSaved').value) || 0;
+      
       const monthlyReturn = ticket * saved;
+      const yearlyReturn = monthlyReturn * 12; // 💡 神仙邏輯：算出一年總額
       
       document.getElementById('monthlySavedVal').innerText = monthlyReturn.toLocaleString();
+      document.getElementById('yearlySavedVal').innerText = yearlyReturn.toLocaleString(); // 💡 顯示在畫面上
       
       const paybackEl = document.getElementById('monthsToPayback');
       const msgEl = document.getElementById('roiMessage');
