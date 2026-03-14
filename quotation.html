@@ -128,10 +128,10 @@
     </a>
   </div>
 
-  <script>
+ <script>
     let systemBasePrice = 60000;
 
-    // 1. 投資回報計算邏輯
+    // 1. 投資回報計算邏輯 (完全沒動)
     window.calculateROI = function() {
       const ticket = parseInt(document.getElementById('calcTicket').value) || 0;
       const saved = parseInt(document.getElementById('calcSaved').value) || 0;
@@ -160,7 +160,28 @@
       }
     };
 
-    // 2. LIFF 初始化與抓取頭像/名稱
+    // 🚀 [新增] 2. 負責發送通知訊號給 GAS 的函數
+    async function notifySales(store, user) {
+      // ⚠️⚠️⚠️ 這裡要換成你剛才 GAS 部署產生的「網頁應用程式 URL」
+      const gasWebUrl = "https://script.google.com/macros/s/AKfycbz1Bik_FnEWTUiLO8qhxU6Rn601u_QOFPHLlQ0T4FQri3graki6K9jZFjVH-M4vQceN/exec"; 
+      
+      try {
+        await fetch(gasWebUrl, {
+          method: 'POST',
+          mode: 'no-cors', // 避免瀏覽器擋下跨網域請求
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'notifyQuotationOpened', // 呼叫 GAS 裡新增的那段攔截器
+            storeName: store,
+            userName: user
+          })
+        });
+      } catch (err) {
+        console.error("通知發送失敗", err);
+      }
+    }
+
+    // 3. LIFF 初始化與抓取頭像/名稱
     async function initializeLiff() {
       try {
         await liff.init({ liffId: "2009451507-efJP6NMG" });
@@ -173,46 +194,47 @@
             picImg.src = profile.pictureUrl;
             picImg.classList.remove('hidden');
           }
+
+          // 🚀 [新增] 抓到名字後，偷偷發送通知給業務群組！
+          const urlParams = new URLSearchParams(window.location.search);
+          const store = urlParams.get('store') || "未知店家";
+          notifySales(store, profile.displayName);
+
         }
       } catch (err) {
         console.error("LIFF 初始化失敗", err);
       }
     }
 
-    // 3. 抓取網址參數與動態算數
+    // 4. 抓取網址參數與動態算數 (完全沒動)
     function handleUrlParams() {
       const urlParams = new URLSearchParams(window.location.search);
       const store = urlParams.get('store');
       const price = urlParams.get('price');
       const days = urlParams.get('days');
-      // 💡 抓取設定費與人數參數
       const setupFee = urlParams.get('setupFee');
       const usersText = urlParams.get('users') || "1人";
 
       if(store) document.getElementById('storeNameSub').innerText = "為 " + store + " 量身打造";
       if(days) document.getElementById('daysLeftDisplay').innerText = days + " 天";
 
-      // 💡 數學神仙邏輯：動態推算所有數字
       let twoYearPriceNum = price ? parseInt(price.replace(/[^\d]/g, "")) : 60000;
       let setupFeeNum = setupFee ? parseInt(setupFee.replace(/[^\d]/g, "")) : 9000;
       
-      let oneYearSystemPrice = twoYearPriceNum / 2; // 一年系統費 = 兩年總價一半
-      let oneYearTotal = oneYearSystemPrice + setupFeeNum; // 一年總費用
-      let twoYearOriginal = twoYearPriceNum + setupFeeNum; // 兩年原價 = 兩年總價+設定費
+      let oneYearSystemPrice = twoYearPriceNum / 2; 
+      let oneYearTotal = oneYearSystemPrice + setupFeeNum; 
+      let twoYearOriginal = twoYearPriceNum + setupFeeNum; 
 
-      // 👉 動態渲染一年方案區塊
       document.getElementById('oneYearTotalDisplay').innerText = "$" + oneYearTotal.toLocaleString();
       document.getElementById('oneYearDetailDisplay').innerText = `包含：系統費 $${oneYearSystemPrice.toLocaleString()} + 設定費 $${setupFeeNum.toLocaleString()}`;
       document.getElementById('oneYearUsersDisplay').innerText = `• 使用人數：${usersText}`;
 
-      // 👉 動態渲染兩年方案區塊
       document.getElementById('priceDisplay').innerText = "$" + twoYearPriceNum.toLocaleString();
       document.getElementById('twoYearOriginalDisplay').innerText = `原價 $${twoYearOriginal.toLocaleString()}`;
       document.getElementById('twoYearSaveDisplay').innerText = `💡 現省 $${setupFeeNum.toLocaleString()} 設定費，平均一年只要 $${oneYearSystemPrice.toLocaleString()}！`;
       document.getElementById('twoYearUsersDisplay').innerHTML = `<span class="mr-2">✅</span><span><strong>使用人數：</strong>${usersText}</span>`;
       document.getElementById('twoYearSaveListDisplay').innerHTML = `<span class="mr-2">✅</span><span><strong>免設定費：</strong>現省 ${setupFeeNum.toLocaleString()} 元。</span>`;
 
-      // 參數設定好後，更新試算表基底並算一次試算器
       systemBasePrice = twoYearPriceNum;
       calculateROI();
     }
