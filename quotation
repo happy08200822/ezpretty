@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ezpretty 專屬數位轉型提案</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: 'Helvetica Neue', Arial, '微軟正黑體', sans-serif; }
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="bg-gray-50 pb-24 text-gray-800">
+
+  <div class="relative bg-cover bg-center h-48" style="background-image: url('https://images.unsplash.com/photo-1522337660859-02fbefca4702?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80');">
+    <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+    <div class="absolute inset-0 flex flex-col items-center justify-center text-white px-4 text-center">
+      <p class="text-sm tracking-widest uppercase mb-1 opacity-80">專屬數位轉型提案</p>
+      <h1 class="text-2xl font-bold tracking-wide" id="storeNameDisplay">貴賓 您好</h1>
+    </div>
+  </div>
+
+  <div class="bg-red-50 border-l-4 border-red-500 p-4 mx-4 -mt-6 relative z-10 rounded shadow-sm flex items-center justify-between">
+    <div>
+      <p class="text-sm text-red-700 font-bold">🎁 7日早鳥加贈優惠</p>
+      <p class="text-xs text-red-600 mt-1">確認合作即加送 2 個月系統使用期</p>
+    </div>
+    <div class="text-right">
+      <span class="block text-2xl font-black text-red-600" id="daysLeftDisplay">3 天</span>
+    </div>
+  </div>
+
+  <div class="max-w-md mx-auto px-4 mt-8">
+    
+    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b-2 border-green-500 inline-block pb-1">方案投資評估</h2>
+    
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-4 opacity-80 relative">
+      <h3 class="text-gray-500 font-bold">1️⃣ 官網標準一年方案</h3>
+      <div class="mt-3 flex items-end">
+        <span class="text-2xl font-black text-gray-700">$39,000</span>
+      </div>
+      <p class="text-xs text-gray-400 mt-1">包含：系統費 $30,000 + 設定費 $9,000</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-lg border-2 border-green-500 p-5 mb-8 relative transform scale-105">
+      <div class="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">
+        ⭐ 暐庭強烈推薦
+      </div>
+      <h3 class="text-green-700 font-bold text-lg">2️⃣ 專屬陪跑兩年方案</h3>
+      <div class="mt-2 flex items-end">
+        <span class="text-3xl font-black text-gray-800" id="priceDisplay">$60,000</span>
+        <span class="text-xs text-gray-500 ml-2 mb-1 line-through">原價 $69,000</span>
+      </div>
+      <p class="text-sm font-bold text-green-600 mt-1 bg-green-50 inline-block px-2 py-1 rounded">💡 現省 $9,000 設定費！</p>
+      
+      <div class="mt-4 pt-4 border-t border-gray-100">
+        <p class="text-sm font-bold text-gray-700 mb-2">🎁 本方案專屬三大權益：</p>
+        <ul class="text-sm text-gray-600 space-y-2">
+          <li class="flex items-start"><span class="mr-2">✅</span><span><strong>免設定費：</strong>現省 9,000 元。</span></li>
+          <li class="flex items-start"><span class="mr-2">✅</span><span><strong>早鳥加碼：</strong>7日內決定，<span class="text-red-500 font-bold">多送 2 個月</span>。</span></li>
+          <li class="flex items-start"><span class="mr-2">✅</span><span><strong>政府補助：</strong>協助申請，通過<span class="text-green-600 font-bold">再送 1 年</span>。</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b-2 border-yellow-500 inline-block pb-1">💰 投資回報試算</h2>
+    <div class="bg-white rounded-xl shadow-md border border-yellow-300 p-5 mb-8">
+      <p class="text-sm text-gray-600 mb-4">系統不是開銷，是自動幫您接單賺錢的工具。<br>算算看幾個月能回本？</p>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-1">您的平均客單價 (元)</label>
+          <input type="number" id="calcTicket" value="1500" class="w-full border border-gray-300 rounded-lg p-2 text-lg text-gray-800 focus:ring-2 focus:ring-yellow-400 outline-none transition" oninput="calculateROI()">
+        </div>
+        <div>
+          <label class="block text-sm font-bold text-gray-700 mb-1">系統每月幫您救回的放鳥/漏接單數</label>
+          <input type="number" id="calcSaved" value="10" class="w-full border border-gray-300 rounded-lg p-2 text-lg text-gray-800 focus:ring-2 focus:ring-yellow-400 outline-none transition" oninput="calculateROI()">
+        </div>
+      </div>
+
+      <div class="mt-5 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-sm text-gray-600 font-bold">每月自動多賺：</span>
+          <span class="text-lg font-black text-yellow-600">$<span id="monthlySavedVal">15,000</span></span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-gray-600 font-bold">預計回本時間：</span>
+          <span class="text-2xl font-black text-green-600"><span id="monthsToPayback">4.0</span> 個月</span>
+        </div>
+      </div>
+      <p class="text-xs text-gray-400 mt-3 text-center" id="roiMessage">💡 只要幾個月就能回本，剩下的時間都是純賺！</p>
+    </div>
+
+    <h2 class="text-lg font-bold text-gray-800 mb-4 border-b-2 border-blue-500 inline-block pb-1">為什麼選擇暐庭？</h2>
+    <div class="bg-blue-50 rounded-xl p-5 mb-8 text-sm text-gray-700 leading-relaxed border border-blue-100">
+      <p class="mb-3 font-bold text-blue-800">「對我來說，這份報價不只是系統租賃，更是一份專屬陪跑合約。」</p>
+      <p class="mb-3">很多軟體業務賣完系統就消失了，但我更在意的是您的店務是否真的變輕鬆。</p>
+      <div class="space-y-3 mt-4">
+        <div class="flex">
+          <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mr-3">1</div>
+          <div><p class="font-bold text-gray-800">營運導師</p><p class="text-xs text-gray-500 mt-1">不是來教點按鈕的，是陪您優化流程，讓排班、預約徹底自動化。</p></div>
+        </div>
+        <div class="flex">
+          <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mr-3">2</div>
+          <div><p class="font-bold text-gray-800">長期陪跑</p><p class="text-xs text-gray-500 mt-1">數位轉型需要時間，我會確保這份投資轉化為真正的業績與客情。</p></div>
+        </div>
+        <div class="flex">
+          <div class="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold mr-3">3</div>
+          <div><p class="font-bold text-gray-800">專業後盾</p><p class="text-xs text-gray-500 mt-1">任何疑難雜症，我就是您的單一窗口，省去與客服來回溝通的成本。</p></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-3 flex gap-2 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50">
+    <a href="https://line.me/ti/p/lcu67rCFAY" class="flex-1 bg-green-500 text-white text-center py-3 rounded-lg font-bold shadow-md active:bg-green-600 transition duration-150 flex items-center justify-center text-lg">
+      <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 24 24"><path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.05.922.258 1.057.592.122.303.079.759.037 1.08l-.127 1.02c-.039.292-.187 1.155 1.026.643 1.214-.511 6.54-3.856 8.831-6.529C23.084 14.545 24 12.535 24 10.304z"/></svg>
+      聯繫暐庭諮詢細節
+    </a>
+  </div>
+
+  <script>
+    // 全域變數儲存系統報價 (預設 6萬)
+    let systemBasePrice = 60000;
+
+    // 計算投資回報的函數
+    window.calculateROI = function() {
+      const ticket = parseInt(document.getElementById('calcTicket').value) || 0;
+      const saved = parseInt(document.getElementById('calcSaved').value) || 0;
+      
+      const monthlyReturn = ticket * saved;
+      document.getElementById('monthlySavedVal').innerText = monthlyReturn.toLocaleString();
+      
+      const paybackEl = document.getElementById('monthsToPayback');
+      const msgEl = document.getElementById('roiMessage');
+
+      if(monthlyReturn > 0) {
+        const payback = (systemBasePrice / monthlyReturn).toFixed(1);
+        paybackEl.innerText = payback;
+        
+        // 根據回本時間給出不同鼓勵話語
+        if(payback <= 6) {
+          msgEl.innerText = "💡 太划算了！不到半年就回本，剩下的時間都是純利潤！";
+          paybackEl.className = "text-2xl font-black text-green-600";
+        } else {
+          msgEl.innerText = "💡 長期投資，自動化接單幫您省下更多無形成本！";
+          paybackEl.className = "text-2xl font-black text-yellow-600";
+        }
+      } else {
+        paybackEl.innerText = "∞";
+        paybackEl.className = "text-2xl font-black text-gray-400";
+        msgEl.innerText = "請輸入預估數字看看系統能幫您賺多少。";
+      }
+    };
+
+    document.addEventListener("DOMContentLoaded", function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const store = urlParams.get('store');
+      const price = urlParams.get('price');
+      const days = urlParams.get('days');
+
+      if(store) document.getElementById('storeNameDisplay').innerText = store + " 您好";
+      if(price) {
+        let cleanPrice = price.replace(/[^\d]/g, "");
+        systemBasePrice = parseInt(cleanPrice) || 60000; // 更新給試算器用的基底金額
+        document.getElementById('priceDisplay').innerText = "$" + systemBasePrice.toLocaleString();
+      }
+      if(days) document.getElementById('daysLeftDisplay').innerText = days + " 天";
+
+      // 畫面載入時先算一次預設值
+      calculateROI();
+    });
+  </script>
+</body>
+</html>
