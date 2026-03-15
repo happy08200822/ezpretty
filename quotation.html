@@ -6,9 +6,47 @@
   <title>Ezpretty 專屬數位轉型提案</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  
   <style>
     body { font-family: 'Helvetica Neue', Arial, '微軟正黑體', sans-serif; }
     ::-webkit-scrollbar { display: none; }
+    
+    /* 🌟 第一刀：讓輸入框看起來像可以點擊的黃色呼吸燈 */
+    #calcTicket, #calcSaved {
+      background-color: #fffde7; 
+      border: 2px dashed #facc15; 
+      transition: all 0.3s ease;
+      animation: pulse-border 2s infinite; 
+    }
+    @keyframes pulse-border {
+      0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.5); }
+      70% { box-shadow: 0 0 0 10px rgba(250, 204, 21, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+    }
+    /* 點擊輸入時，動畫消失並變回實線 */
+    #calcTicket:focus, #calcSaved:focus {
+      animation: none;
+      background-color: #ffffff;
+      border: 2px solid #facc15;
+      outline: none;
+    }
+
+    /* 🌟 第二刀：讓按鈕像Q彈蛋糕一樣持續跳動，引誘點擊 */
+    .animate-jello-safe {
+      animation: jello-safe 3s infinite;
+      transform-origin: center;
+    }
+    @keyframes jello-safe {
+      11.1% { transform: translate3d(0, 0, 0); }
+      22.2% { transform: skewX(-1.5deg) skewY(-1.5deg); }
+      33.3% { transform: skewX(0.75deg) skewY(0.75deg); }
+      44.4% { transform: skewX(-0.375deg) skewY(-0.375deg); }
+      55.5% { transform: skewX(0.1875deg) skewY(0.1875deg); }
+      66.6% { transform: skewX(-0.09375deg) skewY(-0.09375deg); }
+      77.7% { transform: skewX(0.046875deg) skewY(0.046875deg); }
+      88.8% { transform: skewX(-0.0234375deg) skewY(-0.0234375deg); }
+      100% { transform: translate3d(0, 0, 0); }
+    }
   </style>
 </head>
 <body class="bg-gray-50 pb-24 text-gray-800">
@@ -77,14 +115,24 @@
       
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-bold text-gray-700 mb-1">您的平均客單價 (元)</label>
-          <input type="number" id="calcTicket" value="1500" class="w-full border border-gray-300 rounded-lg p-2 text-lg text-gray-800 focus:ring-2 focus:ring-yellow-400 outline-none transition" oninput="calculateROI()">
+          <label class="flex items-center text-sm font-bold text-gray-700 mb-1">
+            您的平均客單價 (元)
+            <span class="ml-2 text-[10px] bg-yellow-500 text-white px-2 py-0.5 rounded animate-bounce">點擊修改 👇</span>
+          </label>
+          <input type="number" id="calcTicket" value="1500" class="w-full rounded-lg p-2 text-lg text-gray-800 font-bold text-center">
         </div>
-        <div>
-          <label class="block text-sm font-bold text-gray-700 mb-1">系統每月幫您救回的放鳥/漏接單數</label>
-          <input type="number" id="calcSaved" value="10" class="w-full border border-gray-300 rounded-lg p-2 text-lg text-gray-800 focus:ring-2 focus:ring-yellow-400 outline-none transition" oninput="calculateROI()">
+       <div>
+          <label class="flex items-center text-sm font-bold text-gray-700 mb-1">
+            每月幫您救回漏接單數
+            <span class="ml-2 text-[10px] bg-yellow-500 text-white px-2 py-0.5 rounded animate-bounce">點擊修改 👇</span>
+          </label>
+          <input type="number" id="calcSaved" value="10" class="w-full rounded-lg p-2 text-lg text-gray-800 font-bold text-center">
         </div>
       </div>
+
+      <button onclick="calculateROI_Manual(event)" class="w-full bg-amber-400 hover:bg-amber-500 text-amber-950 font-black py-4 rounded-xl shadow-lg border-4 border-amber-300 transition duration-150 mt-4 mb-2 flex items-center justify-center text-xl animate-jello-safe">
+  📈 點擊查看我的獲利分析 (12個月)
+</button>
 
       <div class="mt-5 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
         <div class="flex justify-between items-center mb-2">
@@ -134,17 +182,42 @@
 
  <script>
     let systemBasePrice = 60000;
+    
+    // 🌟 讀心術變數準備：計時器與軌跡小本本
+    let startTime = Date.now(); 
+    let calcHistory = []; 
 
-    // 1. 投資回報計算邏輯
+    // 🌟 1. 「手動按鈕」專用的邏輯 (負責把數字寫進小本本)
+    window.calculateROI_Manual = function(event) {
+      const ticket = document.getElementById('calcTicket').value || 0;
+      const saved = document.getElementById('calcSaved').value || 0;
+      
+      // 百分之百記下老闆娘這時候按下的數字
+      const record = `(${ticket},${saved})`;
+      calcHistory.push(record);
+      
+      // 讓按鈕閃一下，給她「正在計算」的專業感
+      const btn = event.target;
+      const originalText = btn.innerText;
+      btn.innerText = "📈 幫您精算中...";
+      setTimeout(() => {
+        btn.innerText = originalText;
+      }, 600);
+
+      // 算完後更新畫面
+      calculateROI();
+    };
+
+    // 🌟 2. 這是原本的畫面更新邏輯 (負責把錢算出來顯示在畫面上)
     window.calculateROI = function() {
       const ticket = parseInt(document.getElementById('calcTicket').value) || 0;
       const saved = parseInt(document.getElementById('calcSaved').value) || 0;
       
       const monthlyReturn = ticket * saved;
-      const yearlyReturn = monthlyReturn * 12; // 💡 神仙邏輯：算出一年總額
+      const yearlyReturn = monthlyReturn * 12; 
       
       document.getElementById('monthlySavedVal').innerText = monthlyReturn.toLocaleString();
-      document.getElementById('yearlySavedVal').innerText = yearlyReturn.toLocaleString(); // 💡 顯示在畫面上
+      document.getElementById('yearlySavedVal').innerText = yearlyReturn.toLocaleString(); 
       
       const paybackEl = document.getElementById('monthsToPayback');
       const msgEl = document.getElementById('roiMessage');
@@ -167,7 +240,7 @@
       }
     };
 
-   // 🚀 [修改] 2. 負責發送通知訊號給 GAS 的函數 (加入 userId)
+    // 🚀 3. 負責發送通知訊號給 GAS 的函數 (包含白名單比對用的 UID)
     async function notifySales(store, user, uid) {
       const gasWebUrl = "https://script.google.com/macros/s/AKfycbz1Bik_FnEWTUiLO8qhxU6Rn601u_QOFPHLlQ0T4FQri3graki6K9jZFjVH-M4vQceN/exec"; 
       
@@ -180,7 +253,7 @@
             action: 'notifyQuotationOpened',
             storeName: store,
             userName: user,
-            userId: uid // 💡 把真實的 LINE ID 傳給 GAS 進行白名單比對
+            userId: uid 
           })
         });
       } catch (err) {
@@ -188,7 +261,41 @@
       }
     }
 
-    // 3. LIFF 初始化與抓取頭像/名稱
+    // 🕵️‍♂️ 4. [新增] 離開網頁時，發送停留時間與軌跡給 GAS
+    async function sendDuration() {
+      const endTime = Date.now();
+      const staySeconds = Math.round((endTime - startTime) / 1000);
+      if (staySeconds < 2) return; // 待不到2秒當作誤觸
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const store = urlParams.get('store') || "未知店家";
+      const gasWebUrl = "https://script.google.com/macros/s/AKfycbz1Bik_FnEWTUiLO8qhxU6Rn601u_QOFPHLlQ0T4FQri3graki6K9jZFjVH-M4vQceN/exec"; 
+
+      // 把軌跡陣列變成字串，準備發給 GAS
+      const historyStr = calcHistory.length > 0 ? " 軌跡:" + calcHistory.join("→") : "";
+
+      fetch(gasWebUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'logDuration',
+          storeName: store,
+          duration: staySeconds,
+          calcData: historyStr
+        }),
+        keepalive: true // 確保網頁關閉時還能硬發出去
+      });
+    }
+
+    // 監聽網頁關閉或縮小事件，觸發上面那個函數
+    document.addEventListener("visibilitychange", function() {
+      if (document.visibilityState === 'hidden') {
+        sendDuration();
+      }
+    });
+
+    // 5. LIFF 初始化與抓取頭像/名稱
     async function initializeLiff() {
       try {
         await liff.init({ liffId: "2009451507-efJP6NMG" });
@@ -202,7 +309,6 @@
             picImg.classList.remove('hidden');
           }
 
-          // 🚀 [修改] 抓到資料後，把 store, 名字, 和 LINE ID 都傳遞過去
           const urlParams = new URLSearchParams(window.location.search);
           const store = urlParams.get('store') || "未知店家";
           notifySales(store, profile.displayName, profile.userId);
@@ -213,7 +319,7 @@
       }
     }
 
-    // 4. 抓取網址參數與動態算數 (完全沒動)
+    // 6. 抓取網址參數與動態算數 (維持不動)
     function handleUrlParams() {
       const urlParams = new URLSearchParams(window.location.search);
       const store = urlParams.get('store');
