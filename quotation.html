@@ -47,6 +47,17 @@
       88.8% { transform: skewX(-0.0234375deg) skewY(-0.0234375deg); }
       100% { transform: translate3d(0, 0, 0); }
     }
+
+    /* 🌟 新增：計算結果跳動高光特效 */
+    @keyframes highlight-pop {
+      0% { transform: scale(1); background-color: transparent; }
+      50% { transform: scale(1.2); background-color: #fef08a; border-radius: 4px; padding: 2px 8px; color: #b45309; }
+      100% { transform: scale(1); background-color: transparent; }
+    }
+    .animate-pop {
+      animation: highlight-pop 0.6s ease-out;
+      display: inline-block;
+    }
   </style>
 </head>
 <body class="bg-gray-50 pb-24 text-gray-800">
@@ -183,20 +194,20 @@
  <script>
     let systemBasePrice = 60000;
     
-    // 🌟 讀心術變數準備：計時器與軌跡小本本
+    // 🌟 讀心術變數準備：計時器、軌跡、與身分紀錄
     let startTime = Date.now(); 
     let calcHistory = []; 
+    let currentUserId = "";    // 💡 新增：用來記住現在是誰打開的
+    let currentUserName = "";  // 💡 新增：用來記住名字
 
     // 🌟 1. 「手動按鈕」專用的邏輯 (負責把數字寫進小本本)
     window.calculateROI_Manual = function(event) {
       const ticket = document.getElementById('calcTicket').value || 0;
       const saved = document.getElementById('calcSaved').value || 0;
       
-      // 百分之百記下老闆娘這時候按下的數字
       const record = `(${ticket},${saved})`;
       calcHistory.push(record);
       
-      // 讓按鈕閃一下，給她「正在計算」的專業感
       const btn = event.target;
       const originalText = btn.innerText;
       btn.innerText = "📈 幫您精算中...";
@@ -204,11 +215,10 @@
         btn.innerText = originalText;
       }, 600);
 
-      // 算完後更新畫面
       calculateROI();
     };
 
-    // 🌟 2. 這是原本的畫面更新邏輯 (負責把錢算出來顯示在畫面上)
+    // 🌟 2. 畫面更新邏輯 (負責算錢，並加上「閃爍跳動動畫」)
     window.calculateROI = function() {
       const ticket = parseInt(document.getElementById('calcTicket').value) || 0;
       const saved = parseInt(document.getElementById('calcSaved').value) || 0;
@@ -228,19 +238,30 @@
         
         if(payback <= 6) {
           msgEl.innerText = "💡 太划算了！不到半年就回本，剩下的時間都是純利潤！";
-          paybackEl.className = "text-2xl font-black text-green-600";
+          paybackEl.className = "text-2xl font-black text-green-600 animate-pop"; 
         } else {
           msgEl.innerText = "💡 長期投資，自動化接單幫您省下更多無形成本！";
-          paybackEl.className = "text-2xl font-black text-yellow-600";
+          paybackEl.className = "text-2xl font-black text-yellow-600 animate-pop"; 
         }
       } else {
         paybackEl.innerText = "∞";
         paybackEl.className = "text-2xl font-black text-gray-400";
         msgEl.innerText = "請輸入預估數字看看系統能幫您賺多少。";
       }
+
+      // 🎯 【動畫點火器】強制觸發 $15,000 和 $180,000 的高光跳動特效！
+      const els = ['monthlySavedVal', 'yearlySavedVal'];
+      els.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.classList.remove('animate-pop');
+          void el.offsetWidth; // 魔法指令：重置動畫
+          el.classList.add('animate-pop');
+        }
+      });
     };
 
-    // 🚀 3. 負責發送通知訊號給 GAS 的函數 (包含白名單比對用的 UID)
+    // 🚀 3. 發送開啟通知給 GAS
     async function notifySales(store, user, uid) {
       const gasWebUrl = "https://script.google.com/macros/s/AKfycbz1Bik_FnEWTUiLO8qhxU6Rn601u_QOFPHLlQ0T4FQri3graki6K9jZFjVH-M4vQceN/exec"; 
       
@@ -261,17 +282,16 @@
       }
     }
 
-    // 🕵️‍♂️ 4. [新增] 離開網頁時，發送停留時間與軌跡給 GAS
+    // 🕵️‍♂️ 4. [升級] 離開網頁時，發送停留時間、軌跡，還有「身分ID」給 GAS
     async function sendDuration() {
       const endTime = Date.now();
       const staySeconds = Math.round((endTime - startTime) / 1000);
-      if (staySeconds < 2) return; // 待不到2秒當作誤觸
+      if (staySeconds < 2) return; 
 
       const urlParams = new URLSearchParams(window.location.search);
       const store = urlParams.get('store') || "未知店家";
       const gasWebUrl = "https://script.google.com/macros/s/AKfycbz1Bik_FnEWTUiLO8qhxU6Rn601u_QOFPHLlQ0T4FQri3graki6K9jZFjVH-M4vQceN/exec"; 
 
-      // 把軌跡陣列變成字串，準備發給 GAS
       const historyStr = calcHistory.length > 0 ? " 軌跡:" + calcHistory.join("→") : "";
 
       fetch(gasWebUrl, {
@@ -282,20 +302,21 @@
           action: 'logDuration',
           storeName: store,
           duration: staySeconds,
-          calcData: historyStr
+          calcData: historyStr,
+          userId: currentUserId,     // 💡 帶著身分證傳送
+          userName: currentUserName  // 💡 帶著名字傳送
         }),
-        keepalive: true // 確保網頁關閉時還能硬發出去
+        keepalive: true 
       });
     }
 
-    // 監聽網頁關閉或縮小事件，觸發上面那個函數
     document.addEventListener("visibilitychange", function() {
       if (document.visibilityState === 'hidden') {
         sendDuration();
       }
     });
 
-    // 5. LIFF 初始化與抓取頭像/名稱
+    // 5. [升級] LIFF 初始化與抓取頭像/名稱
     async function initializeLiff() {
       try {
         await liff.init({ liffId: "2009451507-efJP6NMG" });
@@ -309,17 +330,20 @@
             picImg.classList.remove('hidden');
           }
 
+          // 💡 抓到資料後，偷偷存在全域變數裡，讓關閉網頁時可以使用
+          currentUserId = profile.userId;
+          currentUserName = profile.displayName;
+
           const urlParams = new URLSearchParams(window.location.search);
           const store = urlParams.get('store') || "未知店家";
           notifySales(store, profile.displayName, profile.userId);
-
         }
       } catch (err) {
         console.error("LIFF 初始化失敗", err);
       }
     }
 
-    // 6. 抓取網址參數與動態算數 (維持不動)
+    // 6. 抓取網址參數
     function handleUrlParams() {
       const urlParams = new URLSearchParams(window.location.search);
       const store = urlParams.get('store');
@@ -352,7 +376,6 @@
       calculateROI();
     }
 
-    // 當網頁載入完成時，啟動所有功能
     document.addEventListener("DOMContentLoaded", function() {
       handleUrlParams();
       initializeLiff();
