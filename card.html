@@ -140,12 +140,14 @@
 </div>
 
 <script>
+  // 你的專屬 LIFF ID
   const MY_LIFF_ID = "2005817629-5OfjSdY5";
   let isLiffReady = false;
   let formattedTimeText = "";
 
   function setDefaultDateTime() {
     const now = new Date();
+    // 預設下一個整點
     now.setHours(now.getHours() + 1, 0, 0, 0);
     const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     const picker = document.getElementById('meetTimePicker');
@@ -225,7 +227,7 @@
     btn.disabled = true;
     btn.innerText = "正在開啟發送視窗...";
 
-    // 符合 LINE 規範的完整 Flex 結構
+    // 完整的 Flex Message 結構
     const cardJSON = {
       "type": "bubble",
       "header": {
@@ -313,7 +315,7 @@
                     "action": {
                       "type": "uri",
                       "label": "iOS 下載",
-                      "uri": "https://apps.apple.com/tw/app/google-meet/id1096918515"
+                      "uri": "https://apps.apple.com/app/id1096928856"
                     },
                     "style": "secondary",
                     "height": "sm"
@@ -378,6 +380,7 @@
     }
   }
 
+  // 初始化預設時間與 LIFF
   setDefaultDateTime();
   initLiff();
 </script>
