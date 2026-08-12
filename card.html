@@ -67,8 +67,14 @@
       cursor: pointer;
       margin-top: 10px;
       box-shadow: 0 4px 8px rgba(0,200,0,0.25);
+      transition: background-color 0.2s;
     }
-    .send-btn:active {
+    .send-btn:disabled {
+      background-color: #a0aec0;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .send-btn:active:not(:disabled) {
       transform: scale(0.98);
     }
     .tips {
@@ -77,6 +83,24 @@
       color: #888888;
       text-align: center;
       line-height: 1.5;
+    }
+    #statusMsg {
+      display: none;
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      text-align: center;
+    }
+    .status-error {
+      background-color: #fff2f0;
+      color: #ff4d4f;
+      border: 1px solid #ffccc7;
+    }
+    .status-warning {
+      background-color: #fffbe6;
+      color: #faad14;
+      border: 1px solid #ffe58f;
     }
   </style>
 </head>
@@ -87,7 +111,7 @@
 
   <div class="form-group">
     <label for="meetTime">📅 預約展示時間：</label>
-    <input type="text" id="meetTime" value="2026/08/13 (四) 20:30">
+    <input type="text" id="meetTime" placeholder="例：2026/08/13 (四) 20:30">
   </div>
 
   <div class="form-group">
@@ -97,34 +121,70 @@
 
   <button class="send-btn" id="sendBtn" onclick="sendAppointmentCard()">發送約展卡片至群組/好友</button>
 
+  <div id="statusMsg"></div>
+
   <div class="tips">
     💡 點擊發送後勾選對象即可傳送。
   </div>
 </div>
 
 <script>
-  // 你的專屬 LIFF ID
   const MY_LIFF_ID = "2005817629-5OfjSdY5";
+  let isLiffReady = false;
+
+  function showMessage(text, type) {
+    const el = document.getElementById('statusMsg');
+    el.className = type === 'error' ? 'status-error' : 'status-warning';
+    el.innerText = text;
+    el.style.display = 'block';
+  }
+
+  function hideMessage() {
+    document.getElementById('statusMsg').style.display = 'none';
+  }
 
   async function initLiff() {
     try {
       await liff.init({ liffId: MY_LIFF_ID });
       if (!liff.isLoggedIn()) {
         liff.login();
+        return;
       }
+      isLiffReady = true;
     } catch (err) {
-      console.error("LIFF 初始化失敗", err);
+      showMessage("LIFF 初始化異常：" + err.message, "error");
     }
   }
 
   async function sendAppointmentCard() {
-    if (!liff.isApiAvailable('shareTargetPicker')) {
-      alert("請在 LINE 聊天室中點開此連結發送唷！");
+    hideMessage();
+    const btn = document.getElementById('sendBtn');
+    const timeVal = document.getElementById('meetTime').value.trim();
+    const salesVal = document.getElementById('salesName').value.trim();
+
+    if (!timeVal) {
+      showMessage("請填寫【預約展示時間】再進行發送！", "error");
+      document.getElementById('meetTime').focus();
+      return;
+    }
+    if (!salesVal) {
+      showMessage("請填寫【業務名稱】再進行發送！", "error");
+      document.getElementById('salesName').focus();
       return;
     }
 
-    const timeVal = document.getElementById('meetTime').value.trim();
-    const salesVal = document.getElementById('salesName').value.trim();
+    if (!isLiffReady) {
+      showMessage("系統連線中，請稍候 2 秒再試一次。", "warning");
+      return;
+    }
+
+    if (!liff.isApiAvailable('shareTargetPicker')) {
+      showMessage("目前環境不支援發送功能，請確認是在 LINE App 內開啟此連結。", "error");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "正在開啟發送視窗...";
 
     const cardJSON = {
       "type": "bubble",
@@ -169,43 +229,16 @@
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                  {
-                    "type": "text",
-                    "text": "📅 時間",
-                    "size": "sm",
-                    "color": "#666666",
-                    "flex": 2
-                  },
-                  {
-                    "type": "text",
-                    "text": timeVal,
-                    "size": "sm",
-                    "weight": "bold",
-                    "color": "#111111",
-                    "flex": 5,
-                    "wrap": true
-                  }
+                  { "type": "text", "text": "📅 時間", "size": "sm", "color": "#666666", "flex": 2 },
+                  { "type": "text", "text": timeVal, "size": "sm", "weight": "bold", "color": "#111111", "flex": 5, "wrap": true }
                 ]
               },
               {
                 "type": "box",
                 "layout": "horizontal",
                 "contents": [
-                  {
-                    "type": "text",
-                    "text": "👤 業務",
-                    "size": "sm",
-                    "color": "#666666",
-                    "flex": 2
-                  },
-                  {
-                    "type": "text",
-                    "text": salesVal,
-                    "size": "sm",
-                    "weight": "bold",
-                    "color": "#111111",
-                    "flex": 5
-                  }
+                  { "type": "text", "text": "👤 業務", "size": "sm", "color": "#666666", "flex": 2 },
+                  { "type": "text", "text": salesVal, "size": "sm", "weight": "bold", "color": "#111111", "flex": 5 }
                 ]
               }
             ]
@@ -223,6 +256,17 @@
             "wrap": true,
             "size": "xs",
             "color": "#444444"
+          },
+          {
+            "type": "button",
+            "action": {
+              "type": "uri",
+              "label": "📲 下載 Google Meet App",
+              "uri": "https://meet.google.com/download"
+            },
+            "style": "secondary",
+            "height": "sm",
+            "margin": "md"
           },
           {
             "type": "separator",
@@ -251,9 +295,15 @@
 
       if (res) {
         liff.closeWindow();
+      } else {
+        btn.disabled = false;
+        btn.innerText = "發送約展卡片至群組/好友";
+        showMessage("已取消發送。", "warning");
       }
     } catch (err) {
-      alert("發送失敗：" + JSON.stringify(err));
+      btn.disabled = false;
+      btn.innerText = "發送約展卡片至群組/好友";
+      showMessage("發送失敗：" + (err.message || JSON.stringify(err)), "error");
     }
   }
 
