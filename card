@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>點擊發送名片卡片</title>
+  <!-- 載入 LINE 官方 SDK -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
+    button { background-color: #06C755; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    button:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+
+  <button id="sendBtn">選擇好友/群組並發送卡片</button>
+
+  <script>
+    // 【要修改的地方 1】：貼上你在第一步拿到的 LIFF ID
+    const MY_LIFF_ID = "2005817629-5OfjSdY5";
+
+    async function initLiff() {
+      try {
+        await liff.init({ liffId: MY_LIFF_ID });
+        
+        if (!liff.isLoggedIn()) {
+          liff.login(); // 未登入會引導登入
+          return;
+        }
+
+        document.getElementById('sendBtn').addEventListener('click', sendCard);
+      } catch (err) {
+        alert("LIFF 初始化失敗：" + err.message);
+      }
+    }
+
+    async function sendCard() {
+      if (!liff.isApiAvailable('shareTargetPicker')) {
+        alert("請直接在 LINE 裡面開啟這個網址才可以發送喔！");
+        return;
+      }
+
+      try {
+        const res = await liff.shareTargetPicker([
+          {
+            type: "flex",
+            altText: "您收到了一張電子名片",
+            contents: 
+            
+            // 【要修改的地方 2】：替換成你在 Flex Simulator 排好的 JSON 物件
+            {
+              "type": "bubble",
+              "hero": {
+                "type": "image",
+                "url": "https://i.imgur.com/your-image.jpg", // 你的主要卡片圖片網址
+                "size": "full",
+                "aspectRatio": "1:1.5",
+                "aspectMode": "cover"
+              },
+              "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                  {
+                    "type": "text",
+                    "text": "你的姓名 / 品牌名稱",
+                    "weight": "bold",
+                    "size": "xl"
+                  }
+                ]
+              },
+              "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                  {
+                    "type": "button",
+                    "action": {
+                      "type": "uri",
+                      "label": "點我加好友",
+                      "uri": "https://line.me/ti/p/lcu67rCFAY" // 你的加好友連結
+                    },
+                    "style": "primary",
+                    "color": "#06C755"
+                  }
+                ]
+              }
+            }
+            // ----------------------------------------------------
+
+          }
+        ]);
+
+        if (res) {
+          alert("發送成功！");
+        }
+      } catch (err) {
+        alert("發送失敗或取消：" + err.message);
+      }
+    }
+
+    initLiff();
+  </script>
+</body>
+</html>
