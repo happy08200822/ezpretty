@@ -51,9 +51,19 @@
       border-radius: 8px;
       font-size: 15px;
       outline: none;
+      background: #ffffff;
     }
     input:focus {
       border-color: #00C800;
+    }
+    .preview-box {
+      background-color: #f8f9fa;
+      border: 1px dashed #dcdfe6;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #555;
+      margin-top: 6px;
     }
     .send-btn {
       width: 100%;
@@ -110,8 +120,9 @@
   <div class="header-title">🗓️ 線上展示預約卡片發送器</div>
 
   <div class="form-group">
-    <label for="meetTime">📅 預約展示時間：</label>
-    <input type="text" id="meetTime" placeholder="例：2026/08/13 (四) 20:30">
+    <label for="meetTimePicker">📅 選擇展示日期與時間：</label>
+    <input type="datetime-local" id="meetTimePicker" onchange="updateFormattedTime()">
+    <div class="preview-box" id="timePreview">卡片顯示格式：請選擇時間</div>
   </div>
 
   <div class="form-group">
@@ -131,6 +142,39 @@
 <script>
   const MY_LIFF_ID = "2005817629-5OfjSdY5";
   let isLiffReady = false;
+  let formattedTimeText = "";
+
+  function setDefaultDateTime() {
+    const now = new Date();
+    // 預設下一個整點或 1 小時後
+    now.setHours(now.getHours() + 1, 0, 0, 0);
+    
+    // 補齊本地 ISO 字串給 input 預設值
+    const localIso = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const picker = document.getElementById('meetTimePicker');
+    picker.value = localIso;
+    updateFormattedTime();
+  }
+
+  function updateFormattedTime() {
+    const val = document.getElementById('meetTimePicker').value;
+    if (!val) {
+      formattedTimeText = "";
+      document.getElementById('timePreview').innerText = "卡片顯示格式：請選擇時間";
+      return;
+    }
+    const d = new Date(val);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const date = String(d.getDate()).padStart(2, '0');
+    const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+    const dayName = weekDays[d.getDay()];
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+
+    formattedTimeText = `${year}/${month}/${date} (${dayName}) ${hours}:${minutes}`;
+    document.getElementById('timePreview').innerText = `卡片顯示格式：${formattedTimeText}`;
+  }
 
   function showMessage(text, type) {
     const el = document.getElementById('statusMsg');
@@ -159,12 +203,10 @@
   async function sendAppointmentCard() {
     hideMessage();
     const btn = document.getElementById('sendBtn');
-    const timeVal = document.getElementById('meetTime').value.trim();
     const salesVal = document.getElementById('salesName').value.trim();
 
-    if (!timeVal) {
-      showMessage("請填寫【預約展示時間】再進行發送！", "error");
-      document.getElementById('meetTime').focus();
+    if (!formattedTimeText) {
+      showMessage("請選擇【預約展示時間】再進行發送！", "error");
       return;
     }
     if (!salesVal) {
@@ -230,7 +272,7 @@
                 "layout": "horizontal",
                 "contents": [
                   { "type": "text", "text": "📅 時間", "size": "sm", "color": "#666666", "flex": 2 },
-                  { "type": "text", "text": timeVal, "size": "sm", "weight": "bold", "color": "#111111", "flex": 5, "wrap": true }
+                  { "type": "text", "text": formattedTimeText, "size": "sm", "weight": "bold", "color": "#111111", "flex": 5, "wrap": true }
                 ]
               },
               {
@@ -258,15 +300,34 @@
             "color": "#444444"
           },
           {
-            "type": "button",
-            "action": {
-              "type": "uri",
-              "label": "📲 下載 Google Meet App",
-              "uri": "https://meet.google.com/download"
-            },
-            "style": "secondary",
-            "height": "sm",
-            "margin": "md"
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "md",
+            "margin": "md",
+            "contents": [
+              {
+                "type": "button",
+                "action": {
+                  "type": "uri",
+                  "label": "🍎 iOS 下載",
+                  "uri": "https://apps.apple.com/tw/app/google-meet/id1096918515"
+                },
+                "style": "secondary",
+                "height": "sm",
+                "flex": 1
+              },
+              {
+                "type": "button",
+                "action": {
+                  "type": "uri",
+                  "label": "🤖 安卓下載",
+                  "uri": "https://play.google.com/store/apps/details?id=com.google.android.apps.meetings"
+                },
+                "style": "secondary",
+                "height": "sm",
+                "flex": 1
+              }
+            ]
           },
           {
             "type": "separator",
@@ -307,6 +368,8 @@
     }
   }
 
+  // 初始化預設時間與 LIFF
+  setDefaultDateTime();
   initLiff();
 </script>
 
