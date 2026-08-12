@@ -51,7 +51,6 @@
       border-radius: 8px;
       font-size: 15px;
       outline: none;
-      transition: border-color 0.2s;
     }
     input:focus {
       border-color: #00C800;
@@ -99,12 +98,12 @@
   <button class="send-btn" id="sendBtn" onclick="sendAppointmentCard()">發送約展卡片至群組/好友</button>
 
   <div class="tips">
-    💡 點擊發送後，可勾選客戶群組直接以個人名義傳送。
+    💡 點擊發送後勾選對象即可傳送。
   </div>
 </div>
 
 <script>
-  // 您的 LIFF ID
+  // 你的專屬 LIFF ID
   const MY_LIFF_ID = "2005817629-5OfjSdY5";
 
   async function initLiff() {
@@ -127,7 +126,6 @@
     const timeVal = document.getElementById('meetTime').value.trim();
     const salesVal = document.getElementById('salesName').value.trim();
 
-    // 100% 還原原版視覺樣式的 Flex Message
     const cardJSON = {
       "type": "bubble",
       "header": {
@@ -228,26 +226,7 @@
           },
           {
             "type": "separator",
-            "margin": "md"
-          },
-          {
-            "type": "text",
-            "text": "確認請點擊下方按鈕回覆：",
-            "align": "center",
-            "size": "xs",
-            "color": "#888888",
-            "margin": "md"
-          },
-          {
-            "type": "button",
-            "action": {
-              "type": "message",
-              "label": "👇 好的，沒問題！",
-              "text": "好的，沒問題！"
-            },
-            "style": "primary",
-            "color": "#00C800",
-            "height": "sm"
+            "margin": "lg"
           },
           {
             "type": "text",
@@ -255,7 +234,7 @@
             "align": "center",
             "size": "xs",
             "color": "#AAAAAA",
-            "margin": "lg"
+            "margin": "md"
           }
         ]
       }
@@ -271,11 +250,10 @@
       ]);
 
       if (res) {
-        // 發送完成後關閉視窗回 LINE
         liff.closeWindow();
       }
     } catch (err) {
-      alert("發送失敗或已取消：" + err.message);
+      alert("發送失敗：" + JSON.stringify(err));
     }
   }
 
