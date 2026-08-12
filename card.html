@@ -3,104 +3,284 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>點擊發送名片卡片</title>
+  <title>發送約展成功卡片</title>
   <!-- 載入 LINE 官方 SDK -->
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f5f5f5; }
-    button { background-color: #06C755; color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    button:active { transform: scale(0.98); }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .panel-card {
+      background: #ffffff;
+      width: 100%;
+      max-width: 420px;
+      border-radius: 16px;
+      padding: 24px 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    }
+    .header-title {
+      text-align: center;
+      color: #00C800;
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 14px;
+      color: #333333;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #dcdfe6;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus {
+      border-color: #00C800;
+    }
+    .send-btn {
+      width: 100%;
+      background-color: #00C800;
+      color: #ffffff;
+      border: none;
+      padding: 14px;
+      font-size: 17px;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+      box-shadow: 0 4px 8px rgba(0,200,0,0.25);
+    }
+    .send-btn:active {
+      transform: scale(0.98);
+    }
+    .tips {
+      margin-top: 15px;
+      font-size: 12px;
+      color: #888888;
+      text-align: center;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
 
-  <button id="sendBtn">選擇好友/群組並發送卡片</button>
+<div class="panel-card">
+  <div class="header-title">🗓️ 線上展示預約卡片發送器</div>
 
-  <script>
-    // 【要修改的地方 1】：貼上你在第一步拿到的 LIFF ID
-    const MY_LIFF_ID = "2005817629-5OfjSdY5";
+  <div class="form-group">
+    <label for="meetTime">📅 預約展示時間：</label>
+    <input type="text" id="meetTime" value="2026/08/13 (四) 20:30">
+  </div>
 
-    async function initLiff() {
-      try {
-        await liff.init({ liffId: MY_LIFF_ID });
-        
-        if (!liff.isLoggedIn()) {
-          liff.login(); // 未登入會引導登入
-          return;
-        }
+  <div class="form-group">
+    <label for="salesName">👤 業務/顧問名稱：</label>
+    <input type="text" id="salesName" value="暐庭">
+  </div>
 
-        document.getElementById('sendBtn').addEventListener('click', sendCard);
-      } catch (err) {
-        alert("LIFF 初始化失敗：" + err.message);
+  <button class="send-btn" id="sendBtn" onclick="sendAppointmentCard()">發送約展卡片至群組/好友</button>
+
+  <div class="tips">
+    💡 點擊發送後，可勾選客戶群組直接以個人名義傳送。
+  </div>
+</div>
+
+<script>
+  // 您的 LIFF ID
+  const MY_LIFF_ID = "2005817629-50fjSdY5";
+
+  async function initLiff() {
+    try {
+      await liff.init({ liffId: MY_LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        liff.login();
       }
+    } catch (err) {
+      console.error("LIFF 初始化失敗", err);
+    }
+  }
+
+  async function sendAppointmentCard() {
+    if (!liff.isApiAvailable('shareTargetPicker')) {
+      alert("請在 LINE 聊天室中點開此連結發送唷！");
+      return;
     }
 
-    async function sendCard() {
-      if (!liff.isApiAvailable('shareTargetPicker')) {
-        alert("請直接在 LINE 裡面開啟這個網址才可以發送喔！");
-        return;
-      }
+    const timeVal = document.getElementById('meetTime').value.trim();
+    const salesVal = document.getElementById('salesName').value.trim();
 
-      try {
-        const res = await liff.shareTargetPicker([
+    // 100% 還原原版視覺樣式的 Flex Message
+    const cardJSON = {
+      "type": "bubble",
+      "header": {
+        "type": "box",
+        "layout": "vertical",
+        "backgroundColor": "#00C800",
+        "paddingAll": "16px",
+        "contents": [
           {
-            type: "flex",
-            altText: "您收到了一張電子名片",
-            contents: 
-            
-            // 【要修改的地方 2】：替換成你在 Flex Simulator 排好的 JSON 物件
-            {
-              "type": "bubble",
-              "hero": {
-                "type": "image",
-                "url": "https://i.imgur.com/your-image.jpg", // 你的主要卡片圖片網址
-                "size": "full",
-                "aspectRatio": "1:1.5",
-                "aspectMode": "cover"
-              },
-              "body": {
+            "type": "text",
+            "text": "🗓️ 線上展示預約成功",
+            "color": "#FFFFFF",
+            "weight": "bold",
+            "size": "lg",
+            "align": "center"
+          }
+        ]
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "md",
+        "paddingAll": "18px",
+        "contents": [
+          {
+            "type": "text",
+            "text": "親愛的老闆您好，已為您安排 線上 展示...",
+            "wrap": true,
+            "size": "sm",
+            "color": "#333333"
+          },
+          {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": "#F7F8FA",
+            "cornerRadius": "md",
+            "paddingAll": "12px",
+            "spacing": "sm",
+            "contents": [
+              {
                 "type": "box",
-                "layout": "vertical",
+                "layout": "horizontal",
                 "contents": [
                   {
                     "type": "text",
-                    "text": "你的姓名 / 品牌名稱",
+                    "text": "📅 時間",
+                    "size": "sm",
+                    "color": "#666666",
+                    "flex": 2
+                  },
+                  {
+                    "type": "text",
+                    "text": timeVal,
+                    "size": "sm",
                     "weight": "bold",
-                    "size": "xl"
+                    "color": "#111111",
+                    "flex": 5,
+                    "wrap": true
                   }
                 ]
               },
-              "footer": {
+              {
                 "type": "box",
-                "layout": "vertical",
+                "layout": "horizontal",
                 "contents": [
                   {
-                    "type": "button",
-                    "action": {
-                      "type": "uri",
-                      "label": "點我加好友",
-                      "uri": "https://line.me/ti/p/lcu67rCFAY" // 你的加好友連結
-                    },
-                    "style": "primary",
-                    "color": "#06C755"
+                    "type": "text",
+                    "text": "👤 業務",
+                    "size": "sm",
+                    "color": "#666666",
+                    "flex": 2
+                  },
+                  {
+                    "type": "text",
+                    "text": salesVal,
+                    "size": "sm",
+                    "weight": "bold",
+                    "color": "#111111",
+                    "flex": 5
                   }
                 ]
               }
-            }
-            // ----------------------------------------------------
-
+            ]
+          },
+          {
+            "type": "text",
+            "text": "💻 建議設備：\n建議使用電腦或平板參與，畫面較大且字體清晰，能獲得最佳展示體驗唷！業務將於展示前 5 分鐘發送連結，請留意群組。",
+            "wrap": true,
+            "size": "xs",
+            "color": "#444444"
+          },
+          {
+            "type": "text",
+            "text": "💡 重要提醒：\n若您預計使用手機參與，請先下載 Google Meet App，以確保連結能順利開啟唷！",
+            "wrap": true,
+            "size": "xs",
+            "color": "#444444"
+          },
+          {
+            "type": "separator",
+            "margin": "md"
+          },
+          {
+            "type": "text",
+            "text": "確認請點擊下方按鈕回覆：",
+            "align": "center",
+            "size": "xs",
+            "color": "#888888",
+            "margin": "md"
+          },
+          {
+            "type": "button",
+            "action": {
+              "type": "message",
+              "label": "👇 好的，沒問題！",
+              "text": "好的，沒問題！"
+            },
+            "style": "primary",
+            "color": "#00C800",
+            "height": "sm"
+          },
+          {
+            "type": "text",
+            "text": "ezPretty 預約科技",
+            "align": "center",
+            "size": "xs",
+            "color": "#AAAAAA",
+            "margin": "lg"
           }
-        ]);
-
-        if (res) {
-          alert("發送成功！");
-        }
-      } catch (err) {
-        alert("發送失敗或取消：" + err.message);
+        ]
       }
-    }
+    };
 
-    initLiff();
-  </script>
+    try {
+      const res = await liff.shareTargetPicker([
+        {
+          "type": "flex",
+          "altText": "🗓️ 線上展示預約成功通知",
+          "contents": cardJSON
+        }
+      ]);
+
+      if (res) {
+        // 發送完成後關閉視窗回 LINE
+        liff.closeWindow();
+      }
+    } catch (err) {
+      alert("發送失敗或已取消：" + err.message);
+    }
+  }
+
+  initLiff();
+</script>
+
 </body>
 </html>
