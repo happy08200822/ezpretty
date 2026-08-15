@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>會議時段邀約產生器</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --border: #e5e7eb;
+      --text: #1f2937;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --slot-avail-bg: #ecfdf5;
+      --slot-avail-border: #a7f3d0;
+      --slot-avail-text: #065f46;
+      --slot-booked-bg: #f3f4f6;
+      --slot-booked-border: #e5e7eb;
+      --slot-booked-text: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 24px; }
+    .container { max-width: 1150px; margin: 0 auto; display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; }
+    @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+    
+    .card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border); }
+    .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    h2 { font-size: 1.15rem; }
+    
+    .tip-box { background: #eff6ff; border-left: 4px solid var(--primary); padding: 8px 12px; border-radius: 4px; font-size: 0.82rem; color: #1e40af; margin-bottom: 14px; }
+    
+    .day-row { background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .day-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .date-picker-wrap { display: flex; align-items: center; gap: 8px; }
+    .date-picker-wrap input[type="date"] { padding: 4px 8px; font-size: 0.9rem; border: 1px solid var(--border); border-radius: 6px; outline: none; background: #fff; }
+    .weekday-tag { font-weight: 600; color: #2563eb; font-size: 0.95rem; }
+    
+    .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .chip { font-size: 0.8rem; padding: 5px 9px; border-radius: 6px; cursor: pointer; user-select: none; transition: 0.15s; font-weight: 500; }
+    
+    /* 可約狀態（綠色） */
+    .chip.available {
+      background: var(--slot-avail-bg);
+      border: 1px solid var(--slot-avail-border);
+      color: var(--slot-avail-text);
+    }
+    .chip.available:hover {
+      background: #d1fae5;
+    }
+    
+    /* 已約走狀態（灰色劃掉） */
+    .chip.booked {
+      background: var(--slot-booked-bg);
+      border: 1px solid var(--slot-booked-border);
+      color: var(--slot-booked-text);
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+    
+    .quick-actions { display: flex; gap: 8px; margin-top: 6px; font-size: 0.78rem; }
+    .quick-link { color: var(--primary); cursor: pointer; text-decoration: underline; }
+    .quick-link:hover { color: var(--primary-hover); }
+    
+    textarea { width: 100%; height: 440px; font-size: 0.95rem; line-height: 1.6; padding: 12px; border: 1px solid var(--border); border-radius: 8px; resize: vertical; outline: none; }
+    textarea:focus { border-color: var(--primary); }
+    
+    .btn { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-size: 0.95rem; font-weight: 600; cursor: pointer; width: 100%; margin-top: 12px; transition: 0.2s; }
+    .btn:hover { background: var(--primary-hover); }
+    .btn-sm { width: auto; padding: 6px 12px; font-size: 0.85rem; margin: 0; }
+    .btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { background: #f3f4f6; }
+    .btn-danger { background: transparent; color: var(--danger); border: none; padding: 4px 8px; font-size: 0.85rem; cursor: pointer; border-radius: 4px; }
+    .btn-danger:hover { background: #fee2e2; }
+    .toast { display: none; text-align: center; color: #059669; font-weight: 600; margin-top: 8px; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 左側：排程調整 -->
+  <div class="card">
+    <div class="header-actions">
+      <h2>設定可約時段</h2>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-sm btn-outline" onclick="addOneDay()">➕ 新增一天</button>
+        <button class="btn btn-sm btn-outline" onclick="resetToNextDays()">🔄 預設未來5天</button>
+      </div>
+    </div>
+    
+    <div class="tip-box">
+      💡 點擊時段會標記為「已約走」（灰色劃線）。若整天 10:00～20:00 都沒被約，會自動輸出 `10:00～20:00`；若有部分被約走，其餘時間會一一條列。
+    </div>
+
+    <div id="daysList"></div>
+  </div>
+
+  <!-- 右側：即時預覽與複製 -->
+  <div class="card" style="display: flex; flex-direction: column;">
+    <div class="header-actions">
+      <h2>即時文字預覽</h2>
+    </div>
+    <textarea id="resultText"></textarea>
+    <button class="btn" onclick="copyText()">📋 一鍵複製邀約訊息</button>
+    <div class="toast" id="toastMsg">✅ 已複製到剪貼簿！</div>
+  </div>
+</div>
+
+<script>
+  const weekdays = ['（日）', '（一）', '（二）', '（三）', '（四）', '（五）', '（六）'];
+  // 10:00 ~ 20:00 所有時段
+  const allHours = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+  let scheduleData = [];
+
+  function formatDateISO(d) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function initDates() {
+    scheduleData = [];
+    const now = new Date();
+    for (let i = 1; i <= 5; i++) {
+      const d = new Date();
+      d.setDate(now.getDate() + i);
+      scheduleData.push({
+        dateStr: formatDateISO(d),
+        bookedHours: [] // 存放被約走的小時數
+      });
+    }
+  }
+
+  function renderList() {
+    const container = document.getElementById('daysList');
+    container.innerHTML = '';
+
+    scheduleData.forEach((day, idx) => {
+      const parsedDate = new Date(day.dateStr + 'T00:00:00');
+      const weekdayText = isNaN(parsedDate.getTime()) ? '' : weekdays[parsedDate.getDay()];
+
+      const div = document.createElement('div');
+      div.className = 'day-row';
+      div.innerHTML = `
+        <div class="day-header">
+          <div class="date-picker-wrap">
+            <input type="date" value="${day.dateStr}" onchange="updateDate(${idx}, this.value)">
+            <span class="weekday-tag">${weekdayText}</span>
+          </div>
+          <button class="btn-danger" onclick="removeDay(${idx})" title="刪除這一天">刪除</button>
+        </div>
+        <div class="chip-group">
+          ${allHours.map(h => {
+            const isBooked = day.bookedHours.includes(h);
+            const label = `${String(h).padStart(2, '0')}:00`;
+            return `
+              <span class="chip ${isBooked ? 'booked' : 'available'}" onclick="toggleHour(${idx}, ${h})">
+                ${label} ${isBooked ? '(滿)' : ''}
+              </span>
+            `;
+          }).join('')}
+        </div>
+        <div class="quick-actions">
+          <span class="quick-link" onclick="markAllBooked(${idx})">全天約滿</span> · 
+          <span class="quick-link" onclick="markAllAvailable(${idx})">全天空檔</span>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+    generateMessage();
+  }
+
+  function updateDate(idx, val) {
+    scheduleData[idx].dateStr = val;
+    renderList();
+  }
+
+  function toggleHour(idx, h) {
+    const booked = scheduleData[idx].bookedHours;
+    const pos = booked.indexOf(h);
+    if (pos > -1) {
+      booked.splice(pos, 1); // 變回有空
+    } else {
+      booked.push(h); // 標記已約走
+    }
+    renderList();
+  }
+
+  function markAllBooked(idx) {
+    scheduleData[idx].bookedHours = [...allHours];
+    renderList();
+  }
+
+  function markAllAvailable(idx) {
+    scheduleData[idx].bookedHours = [];
+    renderList();
+  }
+
+  function addOneDay() {
+    let lastDate = new Date();
+    if (scheduleData.length > 0) {
+      lastDate = new Date(scheduleData[scheduleData.length - 1].dateStr + 'T00:00:00');
+    }
+    lastDate.setDate(lastDate.getDate() + 1);
+    scheduleData.push({
+      dateStr: formatDateISO(lastDate),
+      bookedHours: []
+    });
+    renderList();
+  }
+
+  function removeDay(idx) {
+    scheduleData.splice(idx, 1);
+    renderList();
+  }
+
+  // 格式化輸出規則：全天沒被約 -> 10:00～20:00，否則逐一條列
+  function formatAvailableTimes(availableHours) {
+    if (availableHours.length === 0) return '';
+    
+    // 檢查是否全天有空 (10:00 ~ 20:00 共 11 個時段都在)
+    if (availableHours.length === allHours.length) {
+      return '10:00～20:00';
+    }
+
+    // 非全天空檔：逐一列出各個時段
+    const sorted = [...availableHours].sort((a, b) => a - b);
+    return sorted.map(h => `${String(h).padStart(2, '0')}:00`).join('、');
+  }
+
+  function generateMessage() {
+    const timeRows = [];
+    scheduleData.forEach(d => {
+      const dt = new Date(d.dateStr + 'T00:00:00');
+      if (isNaN(dt.getTime())) return;
+
+      const m = dt.getMonth() + 1;
+      const date = dt.getDate();
+      const w = weekdays[dt.getDay()];
+      const label = `${m}/${date} ${w}`;
+
+      // 取得所有沒被約走的時間
+      const avail = allHours.filter(h => !d.bookedHours.includes(h));
+      const timeText = formatAvailableTimes(avail);
+
+      if (timeText) {
+        timeRows.push(`${label} ${timeText}`);
+      }
+    });
+
+    const text = `老闆方便通話1分鐘嗎😊\n先簡單跟您了解一下需求，後續我們在安排時間跟您介紹系統～\n\n或是我們可以直接約個時間，跟您線上做介紹唷！\n這邊提供我最近可以的時間給您\n\n${timeRows.join('\n')}\n\n您哪個時段比較方便呢？會議時間大概抓30分鐘以內\n我們用google meeting線上會議的方式進行（不需要開鏡頭），我這邊展示系統的功能&畫面流程給您看～`;
+    document.getElementById('resultText').value = text;
+  }
+
+  function copyText() {
+    const textarea = document.getElementById('resultText');
+    textarea.select();
+    navigator.clipboard.writeText(textarea.value).then(() => {
+      const toast = document.getElementById('toastMsg');
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 2000);
+    });
+  }
+
+  function resetToNextDays() {
+    initDates();
+    renderList();
+  }
+
+  initDates();
+  renderList();
+</script>
+</body>
+</html>
