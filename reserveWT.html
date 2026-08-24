@@ -19,7 +19,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: var(--bg); color: var(--text); padding: 20px 12px; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; }
     
-    .app-card { width: 100%; max-width: 480px; background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.04); padding: 24px 20px; }
+    .app-card { width: 100%; max-width: 480px; background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.04); padding: 24px 20px; position: relative; }
     
     .shop-header { text-align: center; margin-bottom: 20px; }
     .shop-tag { display: inline-block; background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; margin-bottom: 8px; }
@@ -62,6 +62,26 @@
     .submit-btn:hover:not(:disabled) { background: var(--accent-hover); }
     
     .hint-text { text-align: center; font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
+
+    /* 引導彈窗 (Modal) */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);
+      z-index: 999; justify-content: center; align-items: center; padding: 20px;
+    }
+    .modal-box {
+      background: #fff; border-radius: 20px; max-width: 380px; width: 100%;
+      padding: 28px 20px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+      animation: popIn 0.25s ease-out forwards;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-icon { width: 64px; height: 64px; background: #dcfce7; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 16px; }
+    .modal-title { font-size: 1.25rem; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+    .modal-step-box { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 14px; margin: 16px 0; text-align: left; font-size: 0.88rem; color: #334155; line-height: 1.6; }
+    .step-highlight { color: #059669; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -92,10 +112,27 @@
     <input type="tel" class="input-field" id="custPhone" placeholder="聯絡電話 *" oninput="checkValid()">
   </div>
 
-  <button class="submit-btn" id="submitBtn" onclick="sendBookingViaLine()" disabled>
+  <button class="submit-btn" id="submitBtn" onclick="prepareBooking()" disabled>
     <span>傳送預約至 LINE 進行確認</span>
   </button>
-  <div class="hint-text">點擊後將直接開啟 LINE 並自動填寫預約資訊</div>
+  <div class="hint-text">點擊後將為您複製預約資訊並開啟 LINE</div>
+</div>
+
+<!-- 防呆引導彈窗 -->
+<div class="modal-overlay" id="guideModal">
+  <div class="modal-box">
+    <div class="modal-icon">📋</div>
+    <div class="modal-title">預約資訊已複製！</div>
+    
+    <div class="modal-step-box">
+      <b>最後一步：</b><br>
+      點擊下方按鈕前往 LINE 聊天室，在輸入框 <span class="step-highlight">【長按貼上並送出】</span> 即可完成預約！
+    </div>
+
+    <button class="submit-btn" onclick="goToLine()" style="margin-top: 10px;">
+      <span>前往 LINE 貼上送出 ➔</span>
+    </button>
+  </div>
 </div>
 
 <script>
@@ -111,6 +148,7 @@
   let selectedDate = null;
   let selectedTime = null;
   let daysData = [];
+  let preparedMessage = "";
 
   function initServices() {
     const box = document.getElementById('servicesList');
@@ -191,28 +229,31 @@
     btn.disabled = !(selectedService && selectedDate && selectedTime && name && phone);
   }
 
-  function sendBookingViaLine() {
-  const name = document.getElementById('custName').value.trim();
-  const phone = document.getElementById('custPhone').value.trim();
-  const dayObj = daysData.find(d => d.iso === selectedDate);
+  // 1. 點擊送出：先複製文字並彈出引導提示
+  function prepareBooking() {
+    const name = document.getElementById('custName').value.trim();
+    const phone = document.getElementById('custPhone').value.trim();
+    const dayObj = daysData.find(d => d.iso === selectedDate);
 
-  const msg = `您好，我已透過線上表單登記預約：\n\n` +
-              `👤 店家稱呼：${name}\n` +
-              `📱 聯絡電話：${phone}\n` +
-              `💻 預約項目：${selectedService}\n` +
-              `🗓 預約時間：${dayObj.label} (${dayObj.w}) ${selectedTime}\n` +
-              `📹 會議方式：Google Meet (免開鏡頭)\n\n` +
-              `再麻煩您傳送會議連結給我，謝謝！`;
+    preparedMessage = `您好，我已透過線上表單登記預約：\n\n` +
+                      `👤 店家稱呼：${name}\n` +
+                      `📱 聯絡電話：${phone}\n` +
+                      `💻 預約項目：${selectedService}\n` +
+                      `🗓 預約時間：${dayObj.label} (${dayObj.w}) ${selectedTime}\n` +
+                      `📹 會議方式：Google Meet (免開鏡頭)\n\n` +
+                      `再麻煩您傳送會議連結給我，謝謝！`;
 
-  // 1. 自動複製預約內容
-  navigator.clipboard.writeText(msg).then(() => {
-    // 2. 直接精準跳轉到你的個人 LINE 對話（不經過分享選單）
+    navigator.clipboard.writeText(preparedMessage).then(() => {
+      document.getElementById('guideModal').style.display = 'flex';
+    }).catch(() => {
+      document.getElementById('guideModal').style.display = 'flex';
+    });
+  }
+
+  // 2. 點擊彈窗按鈕：前往個人 LINE 聊天室
+  function goToLine() {
     window.location.href = "https://line.me/ti/p/lcu67rCFAY";
-  }).catch(() => {
-    // 若瀏覽器權限阻擋，備案走分享
-    window.location.href = `https://line.me/R/share?text=${encodeURIComponent(msg)}`;
-  });
-}
+  }
 
   initServices();
   initDates();
