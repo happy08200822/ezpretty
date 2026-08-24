@@ -19,8 +19,23 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: var(--bg); color: var(--text); padding: 20px 12px; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; }
     
-    .app-card { width: 100%; max-width: 480px; background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.04); padding: 24px 20px; position: relative; }
+    .app-card { width: 100%; max-width: 480px; background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.04); padding: 24px 20px; position: relative; min-height: 520px; }
     
+    /* 載入中動畫遮罩 */
+    .loading-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255, 255, 255, 0.95); border-radius: 16px;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 50; transition: opacity 0.3s ease;
+    }
+    .spinner {
+      width: 38px; height: 38px; border: 3.5px solid var(--primary-light);
+      border-top-color: var(--primary); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .loading-text { font-size: 0.85rem; color: var(--muted); margin-top: 12px; font-weight: 500; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     .shop-header { text-align: center; margin-bottom: 20px; }
     .shop-tag { display: inline-block; background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; margin-bottom: 8px; }
     .shop-title { font-size: 1.3rem; font-weight: 800; color: var(--text); }
@@ -37,10 +52,9 @@
     .service-name { font-weight: 600; font-size: 0.9rem; }
     .service-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
     
-    /* 日期橫向滾動 */
-    .date-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
-    .date-row::-webkit-scrollbar { display: none; }
-    .date-btn { flex: 0 0 62px; text-align: center; border: 1px solid var(--border); border-radius: 10px; padding: 10px 0; cursor: pointer; background: #fff; transition: 0.15s; }
+    /* 日期全覽網格 (優化點一) */
+    .date-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px; }
+    .date-btn { text-align: center; border: 1px solid var(--border); border-radius: 10px; padding: 10px 0; cursor: pointer; background: #fff; transition: 0.15s; }
     .date-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
     .date-btn.active .d-w, .date-btn.active .d-n { color: #fff; }
     .d-w { font-size: 0.72rem; color: var(--muted); }
@@ -51,12 +65,17 @@
     .time-btn { border: 1px solid var(--border); border-radius: 8px; padding: 8px 0; font-size: 0.85rem; font-weight: 600; text-align: center; cursor: pointer; background: #fff; transition: 0.15s; }
     .time-btn:hover { border-color: var(--primary); color: var(--primary); }
     .time-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .time-btn.disabled { background: #f1f5f9; color: #cbd5e1; border-color: #f1f5f9; cursor: not-allowed; text-decoration: line-through; }
     
     /* 表單輸入 */
     .input-row { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
     .input-field { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; outline: none; }
     .input-field:focus { border-color: var(--primary); }
     
+    /* 隱藏的地址區塊動畫 (優化點二) */
+    .address-wrapper { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, margin-top 0.3s ease-in-out; }
+    .address-wrapper.show { max-height: 100px; margin-top: 10px; }
+
     .submit-btn { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 22px; display: flex; justify-content: center; align-items: center; gap: 6px; transition: 0.2s; }
     .submit-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
     .submit-btn:hover:not(:disabled) { background: var(--accent-hover); }
@@ -87,19 +106,25 @@
 <body>
 
 <div class="app-card">
+  <!-- 載入中遮罩 -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">載入即時預約時段...</div>
+  </div>
+
   <div class="shop-header">
-    <div class="shop-tag" id="shopTag">線上展示預約</div>
-    <h1 class="shop-title" id="shopTitle">系統功能展示與流程介紹</h1>
-    <p class="shop-desc" id="shopDesc">Google Meet 線上操作 · 免開鏡頭 · 約30分鐘</p>
+    <div class="shop-tag" id="shopTag">線上預約</div>
+    <h1 class="shop-title" id="shopTitle">載入中...</h1>
+    <p class="shop-desc" id="shopDesc">請稍候，正在取得最新可約時段...</p>
   </div>
 
   <!-- 步驟 1: 選項目 -->
   <div class="section-label"><span class="step-badge">1</span> 選擇預約項目</div>
   <div class="services-grid" id="servicesList"></div>
 
-  <!-- 步驟 2: 選日期 -->
+  <!-- 步驟 2: 選日期 (已改為 grid) -->
   <div class="section-label"><span class="step-badge">2</span> 選擇預約日期</div>
-  <div class="date-row" id="dateList"></div>
+  <div class="date-grid" id="dateList"></div>
 
   <!-- 步驟 3: 選時間 -->
   <div class="section-label"><span class="step-badge">3</span> 選擇時段</div>
@@ -110,6 +135,11 @@
   <div class="input-row">
     <input type="text" class="input-field" id="custName" placeholder="店家名稱 / 您的稱呼 *" oninput="checkValid()">
     <input type="tel" class="input-field" id="custPhone" placeholder="聯絡電話 *" oninput="checkValid()">
+    
+    <!-- 動態地址欄位 -->
+    <div class="address-wrapper" id="addressWrapper">
+      <input type="text" class="input-field" style="width: 100%;" id="custAddress" placeholder="請輸入店家地址 / 拜訪地點 *" oninput="checkValid()">
+    </div>
   </div>
 
   <button class="submit-btn" id="submitBtn" onclick="prepareBooking()" disabled>
@@ -136,56 +166,106 @@
 </div>
 
 <script>
-  // 貼上你的 GAS Web App URL
   const API_URL = "https://script.google.com/macros/s/AKfycbwUs-vR35AnP5iHJx-Eiwf-b8qnkOTdvzrd4pN0SdFnJcIDS0X6LboqdMd9I1-n--4G/exec";
 
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-  const allHours = ['10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
   
-  let currentConfig = {
-    line_url: "https://line.me/ti/p/lcu67rCFAY"
-  };
+  let dynamicHours = []; 
+  let currentConfig = { line_url: "https://line.me/ti/p/lcu67rCFAY" };
   let bookedMap = {};
+  
   let selectedService = "";
+  let isNeedAddress = false; // 新增判斷旗標
   let selectedDate = null;
   let selectedTime = null;
   let daysData = [];
   let preparedMessage = "";
 
-  // 頁面載入時從 Google Sheets 撈取最新資料
+  function formatLocalDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function generateTimeSlots(openTime, closeTime, intervalMinutes) {
+    let slots = [];
+    try {
+      let openStr = (openTime || "10:00").toString().trim();
+      let closeStr = (closeTime || "20:00").toString().trim();
+      let intv = parseInt(intervalMinutes || "60", 10);
+
+      if (!openStr.includes(':')) openStr = "10:00";
+      if (!closeStr.includes(':')) closeStr = "20:00";
+
+      let [openH, openM] = openStr.split(':').map(Number);
+      let [closeH, closeM] = closeStr.split(':').map(Number);
+      
+      let current = new Date();
+      current.setHours(openH, openM || 0, 0, 0);
+      
+      let end = new Date();
+      end.setHours(closeH, closeM || 0, 0, 0);
+      
+      let limit = 0; 
+      while (current <= end && limit < 50) {
+        let h = String(current.getHours()).padStart(2, '0');
+        let m = String(current.getMinutes()).padStart(2, '0');
+        slots.push(`${h}:${m}`);
+        current.setMinutes(current.getMinutes() + intv);
+        limit++;
+      }
+    } catch (e) {
+      console.error("解析營業時間失敗", e);
+      slots = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
+    }
+    return slots;
+  }
+
   window.onload = function() {
     initDates();
-    if (API_URL && !API_URL.includes("YOUR_GAS")) {
-      fetch(API_URL)
-        .then(res => res.json())
-        .then(data => {
-          if (data.status === 'success') {
-            currentConfig = data.config;
-            bookedMap = data.booked;
-            
-            // 更新介面文字
-            if (currentConfig.tag) document.getElementById('shopTag').innerText = currentConfig.tag;
-            if (currentConfig.title) document.getElementById('shopTitle').innerText = currentConfig.title;
-            if (currentConfig.desc) document.getElementById('shopDesc').innerText = currentConfig.desc;
-            
-            // 渲染服務項目
-            renderServices(currentConfig.services);
-            renderTimes();
-          }
-        })
-        .catch(err => {
-          console.error("載入試算表失敗，使用預設值", err);
-          renderDefaultServices();
-        });
-    } else {
-      renderDefaultServices();
-    }
+
+    fetch(API_URL)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          currentConfig = data.config;
+          bookedMap = data.booked;
+          
+          if (currentConfig.tag) document.getElementById('shopTag').innerText = currentConfig.tag;
+          if (currentConfig.title) document.getElementById('shopTitle').innerText = currentConfig.title;
+          if (currentConfig.desc) document.getElementById('shopDesc').innerText = currentConfig.desc;
+          
+          let openT = currentConfig.open_time || "10:00";
+          let closeT = currentConfig.close_time || "20:00";
+          let intv = currentConfig.interval || "60";
+          dynamicHours = generateTimeSlots(openT, closeT, intv);
+
+          renderServices(currentConfig.services || []);
+          renderTimes();
+        }
+      })
+      .catch(err => {
+        console.error("載入試算表失敗，使用備用預設值", err);
+        renderDefaultServices();
+      })
+      .finally(() => {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.style.opacity = '0';
+        setTimeout(() => overlay.style.display = 'none', 300);
+      });
   };
 
   function renderDefaultServices() {
+    document.getElementById('shopTag').innerText = "線上展示預約";
+    document.getElementById('shopTitle').innerText = "系統功能展示與流程介紹";
+    document.getElementById('shopDesc').innerText = "Google Meet 線上操作 · 免開鏡頭 · 約30分鐘";
+    
+    dynamicHours = generateTimeSlots("10:00", "20:00", "60");
+    
     renderServices([
       { name: "30分鐘 系統功能線上展示 (免開鏡頭)", duration: "30 min", price: "免費" },
-      { name: "1對1 店家營運與預約流程諮詢", duration: "30 min", price: "免費" }
+      { name: "1對1 店家營運現場展示", duration: "60 min", price: "免費" } // 加入現場測試項
     ]);
     renderTimes();
   }
@@ -193,10 +273,17 @@
   function renderServices(services) {
     const box = document.getElementById('servicesList');
     box.innerHTML = '';
+    
     services.forEach((s, idx) => {
       const item = document.createElement('div');
       item.className = `service-item ${idx === 0 ? 'active' : ''}`;
-      if (idx === 0) selectedService = s.name;
+      
+      // 初始化第一次載入時的狀態
+      if (idx === 0) {
+        selectedService = s.name;
+        isNeedAddress = selectedService.includes('現場');
+      }
+
       item.innerHTML = `
         <div>
           <div class="service-name">${s.name}</div>
@@ -204,27 +291,47 @@
         </div>
         <div style="font-weight: 700; color: var(--primary); font-size: 0.9rem;">${s.price}</div>
       `;
+      
       item.onclick = () => {
         document.querySelectorAll('.service-item').forEach(el => el.classList.remove('active'));
         item.classList.add('active');
         selectedService = s.name;
+        
+        // 自動判斷是否包含"現場"
+        isNeedAddress = selectedService.includes('現場');
+        const addrWrap = document.getElementById('addressWrapper');
+        if (isNeedAddress) {
+          addrWrap.classList.add('show');
+        } else {
+          addrWrap.classList.remove('show');
+          document.getElementById('custAddress').value = ""; 
+        }
+        
         checkValid();
       };
       box.appendChild(item);
     });
+    
+    // 初次載入就根據第一個項目決定是否顯示地址框
+    if (isNeedAddress) {
+      document.getElementById('addressWrapper').classList.add('show');
+    }
   }
 
   function initDates() {
     daysData = [];
     const now = new Date();
-    for (let i = 1; i <= 6; i++) {
+
+    for (let i = 0; i < 7; i++) {
       const d = new Date();
       d.setDate(now.getDate() + i);
-      const iso = d.toISOString().split('T')[0];
+      const iso = formatLocalDate(d);
       const m = d.getMonth() + 1;
       const date = d.getDate();
       const w = weekdays[d.getDay()];
-      daysData.push({ iso, label: `${m}/${date}`, w: `週${w}` });
+      const wLabel = (i === 0) ? '今天' : `週${w}`;
+
+      daysData.push({ iso, label: `${m}/${date}`, w: wLabel, isToday: (i === 0) });
     }
     selectedDate = daysData[0].iso;
 
@@ -252,8 +359,19 @@
     const bookedForDay = bookedMap[selectedDate] || [];
     const isAllDayBlocked = bookedForDay.includes("全天不開放");
 
-    allHours.forEach(t => {
-      const isBooked = isAllDayBlocked || bookedForDay.includes(t);
+    const now = new Date();
+    const todayStr = formatLocalDate(now);
+    const currentH = now.getHours();
+    const currentM = now.getMinutes();
+
+    dynamicHours.forEach(t => {
+      const [slotH, slotM] = t.split(':').map(Number);
+      
+      const isPastTime = (selectedDate === todayStr) && 
+                         (slotH < currentH || (slotH === currentH && slotM <= currentM));
+                         
+      const isBooked = isAllDayBlocked || bookedForDay.includes(t) || isPastTime;
+
       const btn = document.createElement('div');
       btn.className = `time-btn ${isBooked ? 'disabled' : ''} ${t === selectedTime ? 'active' : ''}`;
       btn.innerText = t;
@@ -272,22 +390,37 @@
   function checkValid() {
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
+    const address = document.getElementById('custAddress').value.trim();
     const btn = document.getElementById('submitBtn');
-    btn.disabled = !(selectedService && selectedDate && selectedTime && name && phone);
+    
+    let isValid = (selectedService && selectedDate && selectedTime && name && phone);
+    
+    // 如果是現場，地址為必填
+    if (isNeedAddress && !address) {
+      isValid = false;
+    }
+    
+    btn.disabled = !isValid;
   }
 
   function prepareBooking() {
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
+    const address = document.getElementById('custAddress').value.trim();
     const dayObj = daysData.find(d => d.iso === selectedDate);
+
+    // 動態修改推播內容
+    const methodText = isNeedAddress 
+                       ? `📍 拜訪地點：${address}` 
+                       : `📹 會議方式：Google Meet (免開鏡頭)`;
 
     preparedMessage = `您好，我已透過線上表單登記預約：\n\n` +
                       `👤 店家稱呼：${name}\n` +
                       `📱 聯絡電話：${phone}\n` +
                       `💻 預約項目：${selectedService}\n` +
                       `🗓 預約時間：${dayObj.label} (${dayObj.w}) ${selectedTime}\n` +
-                      `📹 會議方式：Google Meet (免開鏡頭)\n\n` +
-                      `再麻煩您傳送會議連結給我，謝謝！`;
+                      `${methodText}\n\n` +
+                      `再麻煩您傳送相關資訊給我，謝謝！`;
 
     navigator.clipboard.writeText(preparedMessage).then(() => {
       document.getElementById('guideModal').style.display = 'flex';
