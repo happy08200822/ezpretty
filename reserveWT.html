@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>線上預約展示</title>
   <style>
+    /* CSS 部分維持不變，移除 Loading 相關的樣式即可 */
     :root {
       --primary: #4f46e5;
       --primary-light: #eef2ff;
@@ -21,21 +22,6 @@
     
     .app-card { width: 100%; max-width: 480px; background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.04); padding: 24px 20px; position: relative; min-height: 520px; }
     
-    /* 載入中動畫遮罩 */
-    .loading-overlay {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(255, 255, 255, 0.95); border-radius: 16px;
-      display: flex; flex-direction: column; justify-content: center; align-items: center;
-      z-index: 50; transition: opacity 0.3s ease;
-    }
-    .spinner {
-      width: 38px; height: 38px; border: 3.5px solid var(--primary-light);
-      border-top-color: var(--primary); border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    .loading-text { font-size: 0.85rem; color: var(--muted); margin-top: 12px; font-weight: 500; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
     .shop-header { text-align: center; margin-bottom: 20px; }
     .shop-tag { display: inline-block; background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; margin-bottom: 8px; }
     .shop-title { font-size: 1.3rem; font-weight: 800; color: var(--text); }
@@ -44,7 +30,6 @@
     .section-label { font-size: 0.9rem; font-weight: 700; margin: 18px 0 10px; display: flex; align-items: center; gap: 6px; }
     .step-badge { width: 18px; height: 18px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 0.7rem; display: inline-flex; align-items: center; justify-content: center; }
     
-    /* 服務項目 */
     .services-grid { display: flex; flex-direction: column; gap: 8px; }
     .service-item { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.15s; }
     .service-item:hover { border-color: var(--primary); }
@@ -52,7 +37,6 @@
     .service-name { font-weight: 600; font-size: 0.9rem; }
     .service-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
     
-    /* 日期全覽網格 */
     .date-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px; }
     .date-btn { text-align: center; border: 1px solid var(--border); border-radius: 10px; padding: 10px 0; cursor: pointer; background: #fff; transition: 0.15s; }
     .date-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
@@ -60,19 +44,19 @@
     .d-w { font-size: 0.72rem; color: var(--muted); }
     .d-n { font-size: 1rem; font-weight: 700; margin-top: 2px; }
     
-    /* 時段網格 */
     .time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
     .time-btn { border: 1px solid var(--border); border-radius: 8px; padding: 8px 0; font-size: 0.85rem; font-weight: 600; text-align: center; cursor: pointer; background: #fff; transition: 0.15s; }
     .time-btn:hover { border-color: var(--primary); color: var(--primary); }
     .time-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
     .time-btn.disabled { background: #f1f5f9; color: #cbd5e1; border-color: #f1f5f9; cursor: not-allowed; text-decoration: line-through; }
     
-    /* 表單輸入 */
+    /* 讓尚未同步完成的時段呈現半透明，暗示正在載入 */
+    .time-btn.syncing { opacity: 0.5; pointer-events: none; }
+    
     .input-row { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
     .input-field { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; outline: none; }
     .input-field:focus { border-color: var(--primary); }
     
-    /* 地址區塊 */
     .address-wrapper { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, margin-top 0.3s ease-in-out; }
     .address-wrapper.show { max-height: 100px; margin-top: 10px; }
 
@@ -82,7 +66,6 @@
     
     .hint-text { text-align: center; font-size: 0.78rem; color: var(--muted); margin-top: 10px; }
 
-    /* 引導彈窗 (Modal) */
     .modal-overlay {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);
@@ -106,31 +89,27 @@
 <body>
 
 <div class="app-card">
-  <!-- 載入中遮罩 -->
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
-    <div class="loading-text">同步 Google 日曆與可約時段...</div>
-  </div>
+  <!-- 已經移除整頁 Loading 遮罩 -->
 
   <div class="shop-header">
     <div class="shop-tag" id="shopTag">線上預約</div>
-    <h1 class="shop-title" id="shopTitle">載入中...</h1>
-    <p class="shop-desc" id="shopDesc">請稍候，正在取得最新可約時段...</p>
+    <h1 class="shop-title" id="shopTitle">系統功能展示與流程介紹</h1>
+    <p class="shop-desc" id="shopDesc">Google Meet 線上操作 · 免開鏡頭 · 約30分鐘</p>
   </div>
 
-  <!-- 步驟 1: 選項目 -->
   <div class="section-label"><span class="step-badge">1</span> 選擇預約項目</div>
   <div class="services-grid" id="servicesList"></div>
 
-  <!-- 步驟 2: 選日期 -->
   <div class="section-label"><span class="step-badge">2</span> 選擇預約日期</div>
   <div class="date-grid" id="dateList"></div>
 
-  <!-- 步驟 3: 選時間 -->
-  <div class="section-label"><span class="step-badge">3</span> 選擇時段</div>
+  <!-- 時段標題加入同步狀態提示 -->
+  <div class="section-label">
+    <span class="step-badge">3</span> 選擇時段 
+    <span id="syncStatus" style="font-size:0.75rem; color:#f59e0b; margin-left:8px; font-weight:normal;">(同步即時空檔中...)</span>
+  </div>
   <div class="time-grid" id="timeList"></div>
 
-  <!-- 步驟 4: 填資料 -->
   <div class="section-label"><span class="step-badge">4</span> 聯絡資訊</div>
   <div class="input-row">
     <input type="text" class="input-field" id="custName" placeholder="店家名稱 / 您的稱呼 *" oninput="checkValid()">
@@ -182,6 +161,9 @@
   let selectedTime = null;
   let daysData = [];
   let preparedMessage = "";
+  
+  // 新增一個變數追蹤是否已經同步完日曆
+  let isSynced = false;
 
   function formatLocalDate(d) {
     const y = d.getFullYear();
@@ -218,19 +200,22 @@
         limit++;
       }
     } catch (e) {
-      console.error("解析營業時間失敗", e);
       slots = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];
     }
     return slots;
   }
 
   window.onload = function() {
+    // 1. 網頁一打開，立刻用預設資料把畫面畫出來，0秒等待！
     initDates();
+    renderDefaultServices();
 
+    // 2. 在背景默默去抓 Google Sheet 跟 日曆資料
     fetch(API_URL)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
+          isSynced = true; // 標記已同步完成
           currentConfig = data.config;
           bookedMap = data.booked;
           
@@ -243,31 +228,30 @@
           let intv = currentConfig.interval || "60";
           dynamicHours = generateTimeSlots(openT, closeT, intv);
 
+          // 重新渲染服務與時段（把真正被約走的時間打叉）
           renderServices(currentConfig.services || []);
           renderTimes();
+          
+          // 隱藏同步提示文字
+          document.getElementById('syncStatus').style.display = 'none';
         }
       })
       .catch(err => {
-        console.error("載入試算表失敗，使用備用預設值", err);
-        renderDefaultServices();
-      })
-      .finally(() => {
-        const overlay = document.getElementById('loadingOverlay');
-        overlay.style.opacity = '0';
-        setTimeout(() => overlay.style.display = 'none', 300);
+        console.error("載入試算表失敗，維持預設狀態", err);
+        isSynced = true;
+        renderTimes();
+        document.getElementById('syncStatus').innerText = "(無法取得最新空檔)";
+        document.getElementById('syncStatus').style.color = "#ef4444";
       });
   };
 
   function renderDefaultServices() {
-    document.getElementById('shopTag').innerText = "線上展示預約";
-    document.getElementById('shopTitle').innerText = "系統功能展示與流程介紹";
-    document.getElementById('shopDesc').innerText = "Google Meet 線上操作 · 免開鏡頭 · 約30分鐘";
     dynamicHours = generateTimeSlots("10:00", "20:00", "60");
     renderServices([
       { name: "30分鐘 系統功能線上展示 (免開鏡頭)", duration: "30 min", price: "免費" },
       { name: "1對1 店家營運現場展示", duration: "60 min", price: "免費" }
     ]);
-    renderTimes();
+    renderTimes(); // 畫出預設時段
   }
 
   function renderServices(services) {
@@ -367,9 +351,12 @@
       const isBooked = isAllDayBlocked || bookedForDay.includes(t) || isPastTime;
 
       const btn = document.createElement('div');
-      btn.className = `time-btn ${isBooked ? 'disabled' : ''} ${t === selectedTime ? 'active' : ''}`;
+      // 如果還沒同步完成，給一個半透明的效果讓客人知道還不能點
+      const syncClass = isSynced ? '' : 'syncing'; 
+      btn.className = `time-btn ${isBooked ? 'disabled' : ''} ${t === selectedTime ? 'active' : ''} ${syncClass}`;
       btn.innerText = t;
-      if (!isBooked) {
+      
+      if (!isBooked && isSynced) {
         btn.onclick = () => {
           document.querySelectorAll('.time-btn').forEach(el => el.classList.remove('active'));
           btn.classList.add('active');
@@ -382,6 +369,9 @@
   }
 
   function checkValid() {
+    // 必須確認日曆已經同步完成才能送出
+    if (!isSynced) return; 
+    
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
     const address = document.getElementById('custAddress').value.trim();
@@ -392,7 +382,6 @@
     btn.disabled = !isValid;
   }
 
-  // 送出預約：寫入 Google Sheet + Google 日曆 + 彈窗引導
   function prepareBooking() {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
@@ -415,7 +404,6 @@
                       `${methodText}\n\n` +
                       `再麻煩您確認預約，謝謝！`;
 
-    // 呼叫 GAS POST 寫入 Sheet 與 日曆
     const payload = {
       custName: name,
       custPhone: phone,
@@ -431,7 +419,6 @@
     })
     .then(res => res.json())
     .then(res => {
-      // 複製文字並顯示彈窗
       navigator.clipboard.writeText(preparedMessage).finally(() => {
         document.getElementById('guideModal').style.display = 'flex';
         btn.innerText = "傳送預約至 LINE 進行確認";
@@ -439,7 +426,6 @@
     })
     .catch(err => {
       console.error("同步至後台失敗", err);
-      // 就算網路短暫不穩，仍確保客人可以傳 LINE
       navigator.clipboard.writeText(preparedMessage).finally(() => {
         document.getElementById('guideModal').style.display = 'flex';
         btn.innerText = "傳送預約至 LINE 進行確認";
