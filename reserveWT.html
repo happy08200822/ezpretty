@@ -192,22 +192,37 @@
   }
 
   function sendBookingViaLine() {
-    const name = document.getElementById('custName').value.trim();
-    const phone = document.getElementById('custPhone').value.trim();
-    const dayObj = daysData.find(d => d.iso === selectedDate);
+  const name = document.getElementById('custName').value.trim();
+  const phone = document.getElementById('custPhone').value.trim();
+  const dayObj = daysData.find(d => d.iso === selectedDate);
 
-    const msg = `您好，我已透過線上表單登記預約：\n\n` +
-                `👤 店家稱呼：${name}\n` +
-                `📱 聯絡電話：${phone}\n` +
-                `💻 預約項目：${selectedService}\n` +
-                `🗓 預約時間：${dayObj.label} (${dayObj.w}) ${selectedTime}\n` +
-                `📹 會議方式：Google Meet (免開鏡頭)\n\n` +
-                `再麻煩您傳送會議連結給我，謝謝！`;
+  const msg = `您好，我已透過線上表單登記預約：\n\n` +
+              `👤 店家稱呼：${name}\n` +
+              `📱 聯絡電話：${phone}\n` +
+              `💻 預約項目：${selectedService}\n` +
+              `🗓 預約時間：${dayObj.label} (${dayObj.w}) ${selectedTime}\n` +
+              `📹 會議方式：Google Meet (免開鏡頭)\n\n` +
+              `再麻煩您傳送會議連結給我，謝謝！`;
 
-    // 使用 LINE URL Scheme 自動帶入文字並跳轉 LINE 選擇聊天室傳送
-    const lineShareUrl = `https://line.me/R/share?text=${encodeURIComponent(msg)}`;
-    window.location.href = lineShareUrl;
-  }
+  // 1. 切換畫面為完成頁面
+  document.querySelector('.app-card').innerHTML = `
+    <div style="text-align: center; padding: 40px 10px;">
+      <div style="width: 60px; height: 60px; background: #dcfce7; color: #166534; border-radius: 50%; display: inline-flex; justify-content: center; align-items: center; font-size: 2rem; margin-bottom: 16px;">✓</div>
+      <h2 style="font-size: 1.3rem; margin-bottom: 8px; color: #0f172a;">預約資料已傳送！</h2>
+      <p style="font-size: 0.88rem; color: #64748b; line-height: 1.6; margin-bottom: 24px;">
+        若您已在 LINE 聊天室送出訊息，<br>我們將會盡快為您確認並提供會議連結。
+      </p>
+      <button onclick="window.close()" style="background: #e2e8f0; color: #334155; border: none; border-radius: 8px; padding: 10px 20px; font-weight: 600; cursor: pointer;">
+        關閉此視窗
+      </button>
+    </div>
+  `;
+
+  // 2. 喚起 LINE 填入文字發送
+  setTimeout(() => {
+    window.location.href = `https://line.me/R/share?text=${encodeURIComponent(msg)}`;
+  }, 100);
+}
 
   initServices();
   initDates();
