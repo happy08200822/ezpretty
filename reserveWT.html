@@ -52,7 +52,7 @@
     .service-name { font-weight: 600; font-size: 0.9rem; }
     .service-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
     
-    /* 日期全覽網格 (優化點一) */
+    /* 日期全覽網格 */
     .date-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px; }
     .date-btn { text-align: center; border: 1px solid var(--border); border-radius: 10px; padding: 10px 0; cursor: pointer; background: #fff; transition: 0.15s; }
     .date-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
@@ -72,7 +72,7 @@
     .input-field { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; outline: none; }
     .input-field:focus { border-color: var(--primary); }
     
-    /* 隱藏的地址區塊動畫 (優化點二) */
+    /* 地址區塊 */
     .address-wrapper { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, margin-top 0.3s ease-in-out; }
     .address-wrapper.show { max-height: 100px; margin-top: 10px; }
 
@@ -109,7 +109,7 @@
   <!-- 載入中遮罩 -->
   <div class="loading-overlay" id="loadingOverlay">
     <div class="spinner"></div>
-    <div class="loading-text">載入即時預約時段...</div>
+    <div class="loading-text">同步 Google 日曆與可約時段...</div>
   </div>
 
   <div class="shop-header">
@@ -122,7 +122,7 @@
   <div class="section-label"><span class="step-badge">1</span> 選擇預約項目</div>
   <div class="services-grid" id="servicesList"></div>
 
-  <!-- 步驟 2: 選日期 (已改為 grid) -->
+  <!-- 步驟 2: 選日期 -->
   <div class="section-label"><span class="step-badge">2</span> 選擇預約日期</div>
   <div class="date-grid" id="dateList"></div>
 
@@ -136,7 +136,6 @@
     <input type="text" class="input-field" id="custName" placeholder="店家名稱 / 您的稱呼 *" oninput="checkValid()">
     <input type="tel" class="input-field" id="custPhone" placeholder="聯絡電話 *" oninput="checkValid()">
     
-    <!-- 動態地址欄位 -->
     <div class="address-wrapper" id="addressWrapper">
       <input type="text" class="input-field" style="width: 100%;" id="custAddress" placeholder="請輸入店家地址 / 拜訪地點 *" oninput="checkValid()">
     </div>
@@ -145,18 +144,22 @@
   <button class="submit-btn" id="submitBtn" onclick="prepareBooking()" disabled>
     <span>傳送預約至 LINE 進行確認</span>
   </button>
-  <div class="hint-text">點擊後將為您複製預約資訊並開啟 LINE</div>
+  <div class="hint-text">點擊後將自動寫入排程並開啟 LINE</div>
 </div>
 
 <!-- 防呆引導彈窗 -->
 <div class="modal-overlay" id="guideModal">
   <div class="modal-box">
     <div class="modal-icon">📋</div>
-    <div class="modal-title">預約資訊已複製！</div>
+    <div class="modal-title">預約資訊已初步登記！</div>
     
     <div class="modal-step-box">
-      <b>最後一步：</b><br>
-      點擊下方按鈕前往 LINE 聊天室，在輸入框 <span class="step-highlight">【長按貼上並送出】</span> 即可完成預約！
+      <b>預約文字已自動複製：</b><br>
+      請點擊下方按鈕前往 LINE，在輸入框 <span class="step-highlight">【長按貼上並送出】</span> 即可快速通知！
+      
+      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #cbd5e1; font-size: 0.8rem; color: #64748b;">
+        💡 忘記貼上傳送也沒關係，暐庭後台已經有紀錄囉！稍晚忙完會主動與您確認預約。
+      </div>
     </div>
 
     <button class="submit-btn" onclick="goToLine()" style="margin-top: 10px;">
@@ -169,13 +172,12 @@
   const API_URL = "https://script.google.com/macros/s/AKfycbwUs-vR35AnP5iHJx-Eiwf-b8qnkOTdvzrd4pN0SdFnJcIDS0X6LboqdMd9I1-n--4G/exec";
 
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-  
   let dynamicHours = []; 
   let currentConfig = { line_url: "https://line.me/ti/p/lcu67rCFAY" };
   let bookedMap = {};
   
   let selectedService = "";
-  let isNeedAddress = false; // 新增判斷旗標
+  let isNeedAddress = false;
   let selectedDate = null;
   let selectedTime = null;
   let daysData = [];
@@ -260,12 +262,10 @@
     document.getElementById('shopTag').innerText = "線上展示預約";
     document.getElementById('shopTitle').innerText = "系統功能展示與流程介紹";
     document.getElementById('shopDesc').innerText = "Google Meet 線上操作 · 免開鏡頭 · 約30分鐘";
-    
     dynamicHours = generateTimeSlots("10:00", "20:00", "60");
-    
     renderServices([
       { name: "30分鐘 系統功能線上展示 (免開鏡頭)", duration: "30 min", price: "免費" },
-      { name: "1對1 店家營運現場展示", duration: "60 min", price: "免費" } // 加入現場測試項
+      { name: "1對1 店家營運現場展示", duration: "60 min", price: "免費" }
     ]);
     renderTimes();
   }
@@ -273,12 +273,9 @@
   function renderServices(services) {
     const box = document.getElementById('servicesList');
     box.innerHTML = '';
-    
     services.forEach((s, idx) => {
       const item = document.createElement('div');
       item.className = `service-item ${idx === 0 ? 'active' : ''}`;
-      
-      // 初始化第一次載入時的狀態
       if (idx === 0) {
         selectedService = s.name;
         isNeedAddress = selectedService.includes('現場');
@@ -297,7 +294,6 @@
         item.classList.add('active');
         selectedService = s.name;
         
-        // 自動判斷是否包含"現場"
         isNeedAddress = selectedService.includes('現場');
         const addrWrap = document.getElementById('addressWrapper');
         if (isNeedAddress) {
@@ -306,13 +302,11 @@
           addrWrap.classList.remove('show');
           document.getElementById('custAddress').value = ""; 
         }
-        
         checkValid();
       };
       box.appendChild(item);
     });
     
-    // 初次載入就根據第一個項目決定是否顯示地址框
     if (isNeedAddress) {
       document.getElementById('addressWrapper').classList.add('show');
     }
@@ -394,22 +388,21 @@
     const btn = document.getElementById('submitBtn');
     
     let isValid = (selectedService && selectedDate && selectedTime && name && phone);
-    
-    // 如果是現場，地址為必填
-    if (isNeedAddress && !address) {
-      isValid = false;
-    }
-    
+    if (isNeedAddress && !address) isValid = false;
     btn.disabled = !isValid;
   }
 
+  // 送出預約：寫入 Google Sheet + Google 日曆 + 彈窗引導
   function prepareBooking() {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerText = "排程登記中...";
+
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
     const address = document.getElementById('custAddress').value.trim();
     const dayObj = daysData.find(d => d.iso === selectedDate);
 
-    // 動態修改推播內容
     const methodText = isNeedAddress 
                        ? `📍 拜訪地點：${address}` 
                        : `📹 會議方式：Google Meet (免開鏡頭)`;
@@ -420,12 +413,37 @@
                       `💻 預約項目：${selectedService}\n` +
                       `🗓 預約時間：${dayObj.label} (${dayObj.w}) ${selectedTime}\n` +
                       `${methodText}\n\n` +
-                      `再麻煩您傳送相關資訊給我，謝謝！`;
+                      `再麻煩您確認預約，謝謝！`;
 
-    navigator.clipboard.writeText(preparedMessage).then(() => {
-      document.getElementById('guideModal').style.display = 'flex';
-    }).catch(() => {
-      document.getElementById('guideModal').style.display = 'flex';
+    // 呼叫 GAS POST 寫入 Sheet 與 日曆
+    const payload = {
+      custName: name,
+      custPhone: phone,
+      serviceName: selectedService,
+      dateIso: selectedDate,
+      timeStr: selectedTime,
+      address: address
+    };
+
+    fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+      // 複製文字並顯示彈窗
+      navigator.clipboard.writeText(preparedMessage).finally(() => {
+        document.getElementById('guideModal').style.display = 'flex';
+        btn.innerText = "傳送預約至 LINE 進行確認";
+      });
+    })
+    .catch(err => {
+      console.error("同步至後台失敗", err);
+      // 就算網路短暫不穩，仍確保客人可以傳 LINE
+      navigator.clipboard.writeText(preparedMessage).finally(() => {
+        document.getElementById('guideModal').style.display = 'flex';
+        btn.innerText = "傳送預約至 LINE 進行確認";
+      });
     });
   }
 
