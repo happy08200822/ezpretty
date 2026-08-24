@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>線上預約展示</title>
   <style>
-    /* CSS 部分維持不變，移除 Loading 相關的樣式即可 */
     :root {
       --primary: #4f46e5;
       --primary-light: #eef2ff;
@@ -89,7 +88,6 @@
 <body>
 
 <div class="app-card">
-  <!-- 已經移除整頁 Loading 遮罩 -->
 
   <div class="shop-header">
     <div class="shop-tag" id="shopTag">線上預約</div>
@@ -382,6 +380,26 @@
     btn.disabled = !isValid;
   }
 
+  // 【新增】老舊手機與 LINE 內部瀏覽器的專用複製備案
+  function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    // 避免畫面亂跳，固定在角落
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand('copy');
+    } catch (err) {
+      console.error('Fallback 複製失敗', err);
+    }
+    document.body.removeChild(textArea);
+  }
+
+  // 送出預約：寫入 Google Sheet + Google 日曆 + 彈窗引導
   function prepareBooking() {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
@@ -404,6 +422,16 @@
                       `${methodText}\n\n` +
                       `再麻煩您確認預約，謝謝！`;
 
+    // 【關鍵修正 1】按下按鈕的第一時間，立刻執行複製動作！破解舊版 iOS 限制
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(preparedMessage).catch(() => {
+        fallbackCopyTextToClipboard(preparedMessage);
+      });
+    } else {
+      fallbackCopyTextToClipboard(preparedMessage);
+    }
+
+    // 【關鍵修正 2】複製完畢後，再發送 API 給 GAS 背景處理
     const payload = {
       custName: name,
       custPhone: phone,
@@ -419,17 +447,15 @@
     })
     .then(res => res.json())
     .then(res => {
-      navigator.clipboard.writeText(preparedMessage).finally(() => {
-        document.getElementById('guideModal').style.display = 'flex';
-        btn.innerText = "傳送預約至 LINE 進行確認";
-      });
+      // 成功後顯示彈窗
+      document.getElementById('guideModal').style.display = 'flex';
+      btn.innerText = "傳送預約至 LINE 進行確認";
     })
     .catch(err => {
       console.error("同步至後台失敗", err);
-      navigator.clipboard.writeText(preparedMessage).finally(() => {
-        document.getElementById('guideModal').style.display = 'flex';
-        btn.innerText = "傳送預約至 LINE 進行確認";
-      });
+      // 就算網路斷線，也讓客人可以傳 LINE
+      document.getElementById('guideModal').style.display = 'flex';
+      btn.innerText = "傳送預約至 LINE 進行確認";
     });
   }
 
