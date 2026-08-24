@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>線上預約系統</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-light: #eef2ff;
+      --accent: #10b981;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 20px 12px; min-height: 100vh; display: flex; justify-content: center; }
+    
+    .app-card { width: 100%; max-width: 480px; background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.04); overflow: hidden; padding: 24px 20px; }
+    
+    .shop-header { text-align: center; margin-bottom: 20px; }
+    .shop-tag { display: inline-block; background: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; margin-bottom: 8px; }
+    .shop-title { font-size: 1.3rem; font-weight: 800; color: var(--text); }
+    .shop-desc { font-size: 0.85rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+    
+    .section-label { font-size: 0.9rem; font-weight: 700; margin: 18px 0 10px; display: flex; align-items: center; gap: 6px; }
+    .step-badge { width: 18px; height: 18px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 0.7rem; display: inline-flex; align-items: center; justify-content: center; }
+    
+    /* 服務項目選擇 */
+    .services-grid { display: flex; flex-direction: column; gap: 8px; }
+    .service-item { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.15s; }
+    .service-item:hover { border-color: var(--primary); }
+    .service-item.active { border-color: var(--primary); background: var(--primary-light); }
+    .service-name { font-weight: 600; font-size: 0.9rem; }
+    .service-meta { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    
+    /* 日期選擇 */
+    .date-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+    .date-row::-webkit-scrollbar { display: none; }
+    .date-btn { flex: 0 0 62px; text-align: center; border: 1px solid var(--border); border-radius: 10px; padding: 10px 0; cursor: pointer; background: #fff; transition: 0.15s; }
+    .date-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+    .date-btn.active .d-w, .date-btn.active .d-n { color: #fff; }
+    .d-w { font-size: 0.72rem; color: var(--muted); }
+    .d-n { font-size: 1rem; font-weight: 700; margin-top: 2px; }
+    
+    /* 時段選擇 */
+    .time-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .time-btn { border: 1px solid var(--border); border-radius: 8px; padding: 8px 0; font-size: 0.85rem; font-weight: 600; text-align: center; cursor: pointer; background: #fff; transition: 0.15s; }
+    .time-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .time-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .time-btn.disabled { background: #f1f5f9; color: #cbd5e1; border-color: #f1f5f9; cursor: not-allowed; text-decoration: line-through; }
+    
+    /* 表單輸入 */
+    .input-row { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+    .input-field { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; outline: none; }
+    .input-field:focus { border-color: var(--primary); }
+    
+    .submit-btn { width: 100%; background: #06c755; color: #fff; border: none; border-radius: 10px; padding: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 22px; display: flex; justify-content: center; align-items: center; gap: 6px; transition: 0.2s; }
+    .submit-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .submit-btn:hover:not(:disabled) { background: #05b04b; }
+  </style>
+</head>
+<body>
+
+<div class="app-card">
+  <div class="shop-header">
+    <div class="shop-tag" id="shopTag">線上預約專區</div>
+    <h1 class="shop-title" id="shopTitle">系統功能展示與諮詢</h1>
+    <p class="shop-desc" id="shopDesc">免開鏡頭 · 線上視訊操作展示 · 約30分鐘</p>
+  </div>
+
+  <!-- 步驟 1: 選項目 -->
+  <div class="section-label"><span class="step-badge">1</span> 選擇預約項目</div>
+  <div class="services-grid" id="servicesList"></div>
+
+  <!-- 步驟 2: 選日期 -->
+  <div class="section-label"><span class="step-badge">2</span> 選擇預約日期</div>
+  <div class="date-row" id="dateList"></div>
+
+  <!-- 步驟 3: 選時間 -->
+  <div class="section-label"><span class="step-badge">3</span> 選擇時段</div>
+  <div class="time-grid" id="timeList"></div>
+
+  <!-- 步驟 4: 填資料 -->
+  <div class="section-label"><span class="step-badge">4</span> 聯絡資訊</div>
+  <div class="input-row">
+    <input type="text" class="input-field" id="custName" placeholder="您的姓名 / 店家稱呼 *" oninput="checkValid()">
+    <input type="tel" class="input-field" id="custPhone" placeholder="聯絡電話 *" oninput="checkValid()">
+  </div>
+
+  <button class="submit-btn" id="submitBtn" onclick="sendBooking()" disabled>
+    <span>傳送預約至 LINE 進行確認</span>
+  </button>
+</div>
+
+<script>
+  // 店家設定資料庫（可依據網址參數動態載入）
+  const shopConfigs = {
+    // 預設：你的業務 Demo 預約
+    default: {
+      tag: "官方展示預約",
+      title: "預約線上功能展示 (免開鏡頭)",
+      desc: "Google Meet 線上畫面操作，為您詳細說明系統如何替店家省時省力。",
+      lineUrl: "https://line.me/ti/p/lcu67rCFAY", // 你的 LINE
+      services: [
+        { name: "30分鐘 系統流程與功能展示", duration: "30 min", price: "免費諮詢" },
+        { name: "1對1 店家需求評估與導入建議", duration: "30 min", price: "免費諮詢" }
+      ]
+    },
+    // 示範轉賣給美甲店的設定
+    nail: {
+      tag: "美甲沙龍預約",
+      title: "晴光美甲美睫工作室",
+      desc: "一對一專屬服務，嚴選日本進口凝膠，請提前預約。",
+      lineUrl: "https://line.me/ti/p/lcu67rCFAY", // 店家的 LINE
+      services: [
+        { name: "手部基礎保養 + 單色凝膠", duration: "60 min", price: "$1,200" },
+        { name: "精選造型設計款 (含保養)", duration: "90 min", price: "$1,680" },
+        { name: "純卸甲 (他店/本店)", duration: "30 min", price: "$400" }
+      ]
+    }
+  };
+
+  // 取得網址參數 ?shop=nail
+  const urlParams = new URLSearchParams(window.location.search);
+  const currentShopKey = urlParams.get('shop') || 'default';
+  const shop = shopConfigs[currentShopKey] || shopConfigs.default;
+
+  // 渲染店家基本資料
+  document.getElementById('shopTag').innerText = shop.tag;
+  document.getElementById('shopTitle').innerText = shop.title;
+  document.getElementById('shopDesc').innerText = shop.desc;
+
+  const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+  const allHours = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+  
+  let selectedService = shop.services[0].name;
+  let selectedDate = null;
+  let selectedTime = null;
+  let daysData = [];
+
+  // 初始化服務項目
+  function initServices() {
+    const box = document.getElementById('servicesList');
+    box.innerHTML = '';
+    shop.services.forEach((s, idx) => {
+      const item = document.createElement('div');
+      item.className = `service-item ${idx === 0 ? 'active' : ''}`;
+      item.innerHTML = `
+        <div>
+          <div class="service-name">${s.name}</div>
+          <div class="service-meta">預估時間：${s.duration}</div>
+        </div>
+        <div style="font-weight: 700; color: var(--primary); font-size: 0.9rem;">${s.price}</div>
+      `;
+      item.onclick = () => {
+        document.querySelectorAll('.service-item').forEach(el => el.classList.remove('active'));
+        item.classList.add('active');
+        selectedService = s.name;
+        checkValid();
+      };
+      box.appendChild(item);
+    });
+  }
+
+  // 初始化未來 6 天
+  function initDates() {
+    daysData = [];
+    const now = new Date();
+    for (let i = 1; i <= 6; i++) {
+      const d = new Date();
+      d.setDate(now.getDate() + i);
+      const iso = d.toISOString().split('T')[0];
+      const m = d.getMonth() + 1;
+      const date = d.getDate();
+      const w = weekdays[d.getDay()];
+      daysData.push({ iso, label: `${m}/${date}`, w: `週${w}` });
+    }
+    selectedDate = daysData[0].iso;
+
+    const box = document.getElementById('dateList');
+    box.innerHTML = '';
+    daysData.forEach((d, idx) => {
+      const btn = document.createElement('div');
+      btn.className = `date-btn ${idx === 0 ? 'active' : ''}`;
+      btn.innerHTML = `<div class="d-w">${d.w}</div><div class="d-n">${d.label}</div>`;
+      btn.onclick = () => {
+        document.querySelectorAll('.date-btn').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+        selectedDate = d.iso;
+        selectedTime = null;
+        renderTimes();
+        checkValid();
+      };
+      box.appendChild(btn);
+    });
+  }
+
+  function renderTimes() {
+    const box = document.getElementById('timeList');
+    box.innerHTML = '';
+    allHours.forEach(t => {
+      const btn = document.createElement('div');
+      btn.className = `time-btn ${t === selectedTime ? 'active' : ''}`;
+      btn.innerText = t;
+      btn.onclick = () => {
+        document.querySelectorAll('.time-btn').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+        selectedTime = t;
+        checkValid();
+      };
+      box.appendChild(btn);
+    });
+  }
+
+  function checkValid() {
+    const name = document.getElementById('custName').value.trim();
+    const phone = document.getElementById('custPhone').value.trim();
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = !(selectedService && selectedDate && selectedTime && name && phone);
+  }
+
+  function sendBooking() {
+    const name = document.getElementById('custName').value.trim();
+    const phone = document.getElementById('custPhone').value.trim();
+    const dayObj = daysData.find(d => d.iso === selectedDate);
+
+    const msg = `您好，我已透過線上表單登記預約：\n\n` +
+                `👤 顧客稱呼：${name}\n` +
+                `📱 聯絡電話：${phone}\n` +
+                `💅 預約項目：${selectedService}\n` +
+                `🗓 預約時間：${dayObj.label} (${dayObj.w}) ${selectedTime}\n\n` +
+                `再麻煩您協助確認預約是否成功，謝謝！`;
+
+    // 複製內容並直接跳轉到該店家的 LINE 官方帳號 / 個人 LINE
+    navigator.clipboard.writeText(msg).then(() => {
+      alert("預約資料已複製！即將為您開啟 LINE 聊天室，直接貼上傳送即可～");
+      window.location.href = shop.lineUrl;
+    });
+  }
+
+  initServices();
+  initDates();
+  renderTimes();
+</script>
+</body>
+</html>
