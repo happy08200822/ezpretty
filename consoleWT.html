@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>預約系統 - 管理後台</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .slot-btn { transition: all 0.15s ease-in-out; }
+    .slot-open { background-color: #ecfdf5; border-color: #6ee7b7; color: #065f46; } 
+    .slot-closed { background-color: #fef2f2; border-color: #fca5a5; color: #991b1b; } 
+    .slot-event { background-color: #eff6ff; border-color: #bfdbfe; color: #1e3a8a; cursor: not-allowed; } 
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .service-card { animation: slideIn 0.2s ease-out forwards; }
+    
+    /* 載入遮罩 */
+    #loading-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.9); z-index: 50;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+    }
+    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 p-4 md:p-8 relative">
+
+  <!-- 載入中遮罩 -->
+  <div id="loading-overlay">
+    <div class="spinner mb-4"></div>
+    <div class="text-lg font-bold text-indigo-700">正在與系統連線中...</div>
+  </div>
+
+  <div class="max-w-5xl mx-auto hidden" id="main-content">
+    
+    <div class="flex justify-between items-center mb-8">
+      <div>
+        <h1 class="text-3xl font-extrabold text-indigo-700">店家管理後台</h1>
+        <p class="text-slate-500 mt-1">輕鬆管理營業設定、服務項目與排班</p>
+      </div>
+      <div class="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-full text-sm font-bold shadow-sm">
+        暐庭 (WT) 專屬系統
+      </div>
+    </div>
+
+    <!-- 區塊 1：品牌與門面設定 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+      <h2 class="text-xl font-bold mb-5 flex items-center gap-2 text-slate-800"><span>🏪</span> 品牌與門面設定</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">小標籤 (tag)</label>
+          <input type="text" id="conf-tag" class="w-full rounded-lg border-slate-300 shadow-sm border p-2.5 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">主標題 (title)</label>
+          <input type="text" id="conf-title" class="w-full rounded-lg border-slate-300 shadow-sm border p-2.5 outline-none">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-semibold text-slate-700 mb-1">副標題/描述 (desc)</label>
+          <input type="text" id="conf-desc" class="w-full rounded-lg border-slate-300 shadow-sm border p-2.5 outline-none">
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-semibold text-slate-700 mb-1">LINE 官方帳號連結 (line_url)</label>
+          <input type="url" id="conf-line" class="w-full rounded-lg border-slate-300 shadow-sm border p-2.5 outline-none text-indigo-600">
+        </div>
+      </div>
+    </div>
+
+    <!-- 區塊 2：營業規則設定 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6">
+      <h2 class="text-xl font-bold mb-5 flex items-center gap-2 text-slate-800"><span>⏱️</span> 營業規則設定</h2>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">開門時間</label>
+          <input type="time" id="conf-open" class="w-full rounded-lg border-slate-300 shadow-sm border p-2.5 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">打烊時間</label>
+          <input type="time" id="conf-close" class="w-full rounded-lg border-slate-300 shadow-sm border p-2.5 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">時段間隔</label>
+          <select id="conf-interval" class="w-full rounded-lg border-slate-300 shadow-sm border p-2.5 outline-none bg-white">
+            <option value="30">每 30 分鐘</option>
+            <option value="60">每 60 分鐘</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1">開放天數</label>
+          <input type="number" id="conf-advance" class="w-full rounded-lg border-slate-300 shadow-sm border p-2.5 outline-none">
+        </div>
+      </div>
+      
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-3">固定公休日 <span class="text-xs font-normal text-slate-400 ml-2">打勾的日子系統會自動排休</span></label>
+        <div class="flex flex-wrap gap-4" id="weekdays-container">
+          <label class="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-100"><input type="checkbox" value="1" class="w-4 h-4 text-indigo-600"> <span class="font-medium">週一</span></label>
+          <label class="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-100"><input type="checkbox" value="2" class="w-4 h-4 text-indigo-600"> <span class="font-medium">週二</span></label>
+          <label class="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-100"><input type="checkbox" value="3" class="w-4 h-4 text-indigo-600"> <span class="font-medium">週三</span></label>
+          <label class="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-100"><input type="checkbox" value="4" class="w-4 h-4 text-indigo-600"> <span class="font-medium">週四</span></label>
+          <label class="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-100"><input type="checkbox" value="5" class="w-4 h-4 text-indigo-600"> <span class="font-medium">週五</span></label>
+          <label class="flex items-center gap-2 cursor-pointer bg-slate-50 border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-100"><input type="checkbox" value="6" class="w-4 h-4 text-indigo-600"> <span class="font-medium">週六</span></label>
+          <label class="flex items-center gap-2 cursor-pointer bg-red-50 border border-red-200 px-4 py-2 rounded-lg hover:bg-red-100"><input type="checkbox" value="0" class="w-4 h-4 text-red-600"> <span class="font-medium text-red-700">週日</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- 區塊 3：動態服務項目管理 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4">
+        <h2 class="text-xl font-bold flex items-center gap-2 text-slate-800"><span>💅</span> 服務項目清單</h2>
+        <button onclick="addServiceCard()" class="bg-indigo-50 text-indigo-700 font-bold px-4 py-2 rounded-lg hover:bg-indigo-100 flex items-center gap-1 border border-indigo-200 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" /></svg>新增項目
+        </button>
+      </div>
+      <div id="services-container" class="space-y-4"></div>
+      <div class="mt-8 flex justify-end pt-5 border-t border-slate-100">
+        <button id="save-settings-btn" onclick="saveAllSettings()" class="bg-indigo-600 text-white font-bold px-8 py-3 rounded-xl hover:bg-indigo-700 shadow-lg flex items-center gap-2">
+          <span>💾</span> 儲存設定與服務清單
+        </button>
+      </div>
+    </div>
+
+    <!-- 區塊 4：排班管理看板 -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
+      <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 border-b border-slate-100 pb-4">
+        <h2 class="text-xl font-bold flex items-center gap-2"><span>📅</span> 排班與店休管理</h2>
+        
+        <div class="flex bg-slate-100 rounded-lg p-1">
+          <button id="btn-prev-week" onclick="changeWeek(-1)" class="px-4 py-1.5 text-sm font-semibold text-slate-600 hover:text-indigo-600 rounded-md disabled:opacity-30">◀ 上一週</button>
+          <button id="btn-next-week" onclick="changeWeek(1)" class="px-4 py-1.5 text-sm font-semibold text-slate-600 hover:text-indigo-600 rounded-md bg-white shadow-sm disabled:opacity-30">下一週 ▶</button>
+        </div>
+      </div>
+
+      <div class="flex gap-4 mb-4 text-sm font-medium text-slate-600">
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-400"></span> 開放預約 (點擊可排休)</div>
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-400"></span> 鎖定休假 (點擊可開放)</div>
+        <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-300"></span> 日曆行程 (無法點擊)</div>
+      </div>
+
+      <!-- 真實日曆網格 -->
+      <div class="overflow-x-auto">
+        <div class="min-w-[700px]" id="schedule-grid-container">
+          <!-- 程式動態產生 -->
+        </div>
+      </div>
+
+      <div class="mt-8 flex justify-end">
+        <button id="save-schedule-btn" onclick="saveSchedule()" class="bg-emerald-500 text-white font-bold px-8 py-3 rounded-xl hover:bg-emerald-600 shadow-lg text-lg flex items-center gap-2">
+          <span>💾</span> 儲存最新排班
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // ⚠️ 貼上你最新的 GAS 網址
+    // ==========================================
+    const API_URL = "https://script.google.com/macros/s/AKfycbwUs-vR35AnP5iHJx-Eiwf-b8qnkOTdvzrd4pN0SdFnJcIDS0X6LboqdMd9I1-n--4G/exec"; 
+
+    // 全局變數
+    let adminGridData = []; 
+    let weekCols = []; // 儲存切分好的每週欄位索引 (例如 [[1,2,3], [4,5,6...]])
+    let currentWkIndex = 0;
+
+    // 1. 畫面載入時自動去抓取最新資料
+    window.onload = function() {
+      fetch(API_URL)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            fillConfigData(data.config);
+            buildScheduleGrid(data.raw_grid);
+            
+            document.getElementById('loading-overlay').style.display = 'none';
+            document.getElementById('main-content').classList.remove('hidden');
+          }
+        })
+        .catch(err => {
+          alert("讀取資料失敗，請確認 API_URL 是否正確");
+          console.error(err);
+        });
+    };
+
+    // 2. 填入設定與服務資料
+    function fillConfigData(config) {
+      document.getElementById('conf-tag').value = config.tag || '';
+      document.getElementById('conf-title').value = config.title || '';
+      document.getElementById('conf-desc').value = config.desc || '';
+      document.getElementById('conf-line').value = config.line_url || '';
+      document.getElementById('conf-open').value = config.open_time || '10:00';
+      document.getElementById('conf-close').value = config.close_time || '20:00';
+      document.getElementById('conf-interval').value = config.interval || '60';
+      document.getElementById('conf-advance').value = config.advance_days || '14';
+      
+      if (config.closed_weekdays) {
+        const days = config.closed_weekdays.split(',').map(s => s.trim());
+        const checkboxes = document.querySelectorAll('#weekdays-container input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+          if (days.includes(cb.value)) cb.checked = true;
+          else cb.checked = false;
+        });
+      }
+
+      const container = document.getElementById('services-container');
+      container.innerHTML = '';
+      if (config.services && config.services.length > 0) {
+        config.services.forEach(s => addServiceCard(s.category, s.name, s.duration, s.price));
+      } else {
+        addServiceCard("", "", "", ""); // 預設留一張空卡片
+      }
+    }
+
+    function addServiceCard(cat = "", name = "", dur = "", price = "") {
+      const container = document.getElementById('services-container');
+      const cardHTML = `
+        <div class="service-card flex flex-col md:flex-row gap-4 p-4 border border-slate-200 rounded-xl bg-slate-50 relative group">
+          <div class="w-full md:w-1/4">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">大分類 (選填)</label>
+            <input type="text" class="w-full rounded-md border-slate-300 border p-2 outline-none" value="${cat}" placeholder="例: 染髮">
+          </div>
+          <div class="w-full md:w-2/4">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">服務名稱</label>
+            <input type="text" class="w-full rounded-md border-slate-300 border p-2 outline-none font-bold" value="${name}" placeholder="服務名稱">
+          </div>
+          <div class="w-full md:w-1/4 flex gap-2">
+            <div class="w-1/2">
+              <label class="block text-xs font-semibold text-slate-500 mb-1">時間</label>
+              <input type="text" class="w-full rounded-md border-slate-300 border p-2 outline-none" value="${dur}" placeholder="30 min">
+            </div>
+            <div class="w-1/2">
+              <label class="block text-xs font-semibold text-slate-500 mb-1">價格</label>
+              <input type="text" class="w-full rounded-md border-slate-300 border p-2 outline-none text-indigo-600 font-bold" value="${price}" placeholder="$500">
+            </div>
+          </div>
+          <button onclick="removeCard(this)" class="absolute -right-2 -top-2 bg-red-100 text-red-600 p-1.5 rounded-full hover:bg-red-500 hover:text-white transition md:opacity-0 md:group-hover:opacity-100 border border-red-200 shadow-sm" title="刪除">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+          </button>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', cardHTML);
+    }
+    function removeCard(btn) {
+      const card = btn.closest('.service-card');
+      card.style.opacity = '0'; card.style.transform = 'translateY(-10px)'; card.style.transition = 'all 0.2s ease-out';
+      setTimeout(() => card.remove(), 200);
+    }
+
+    // 3. 建立動態排班網格
+    function buildScheduleGrid(gridData) {
+      adminGridData = gridData;
+      weekCols = [];
+      let currentChunk = [];
+      
+      // 第 0 欄是時間標題，我們從第 1 欄 (第一天) 開始切分週次
+      for (let c = 1; c < gridData[0].length; c++) {
+        currentChunk.push(c);
+        let headerStr = String(gridData[0][c]);
+        // 遇到週日或是跑到最後一天就斷開
+        if (headerStr.includes("週日") || c === gridData[0].length - 1) {
+          weekCols.push(currentChunk);
+          currentChunk = [];
+        }
+      }
+      currentWkIndex = 0;
+      renderScheduleView();
+    }
+
+    function renderScheduleView() {
+      const container = document.getElementById('schedule-grid-container');
+      container.innerHTML = '';
+      
+      const colsToRender = weekCols[currentWkIndex] || [];
+      const numCols = colsToRender.length + 1; // +1 給時間標題欄
+      
+      // 控制按鈕狀態
+      document.getElementById('btn-prev-week').disabled = (currentWkIndex === 0);
+      document.getElementById('btn-next-week').disabled = (currentWkIndex >= weekCols.length - 1);
+
+      // --- 畫表頭 (日期) ---
+      let headerHTML = `<div class="grid gap-2 mb-3" style="grid-template-columns: repeat(${numCols}, minmax(0, 1fr));">`;
+      headerHTML += `<div class="text-center font-bold text-slate-400 text-sm py-2">時段</div>`;
+      colsToRender.forEach(c => {
+        let text = adminGridData[0][c]; // "2026-08-26 (週三)"
+        let parts = text.split(" ");
+        let datePart = parts[0].substring(5).replace('-', '/'); // "08/26"
+        let weekPart = parts[1] ? parts[1].replace(/[()]/g, '') : ""; // "週三"
+        
+        let colorClass = text.includes("週日") ? "text-red-500" : (text.includes("週六") ? "text-indigo-600" : "text-slate-800");
+        headerHTML += `<div class="text-center bg-slate-50 rounded-lg py-2 border border-slate-200"><div class="text-xs text-slate-500">${weekPart}</div><div class="font-bold ${colorClass}">${datePart}</div></div>`;
+      });
+      headerHTML += `</div>`;
+      container.insertAdjacentHTML('beforeend', headerHTML);
+
+      // --- 畫資料列 (全天 + 每個時段) ---
+      for (let r = 1; r < adminGridData.length; r++) {
+        let rowTitle = adminGridData[r][0]; // "全天店休" 或 "10:00"
+        let borderClass = (r === 1) ? "mb-4 pb-4 border-b border-slate-200" : "mb-2";
+        
+        let rowHTML = `<div class="grid gap-2 ${borderClass}" style="grid-template-columns: repeat(${numCols}, minmax(0, 1fr));">`;
+        rowHTML += `<div class="flex items-center justify-center font-bold text-sm text-slate-500">${rowTitle}</div>`;
+        
+        colsToRender.forEach(c => {
+          let cellVal = adminGridData[r][c];
+          
+          if (cellVal === true) {
+            // 打勾：紅燈 (休假)
+            rowHTML += `<button class="slot-btn slot-closed border rounded-lg py-1.5 text-sm font-bold" data-r="${r}" data-c="${c}" onclick="toggleSlot(this)">休假</button>`;
+          } else if (cellVal === false || cellVal === "") {
+            // 沒打勾：綠燈 (開放)
+            rowHTML += `<button class="slot-btn slot-open border rounded-lg py-1.5 text-sm font-bold" data-r="${r}" data-c="${c}" onclick="toggleSlot(this)">開放</button>`;
+          } else {
+            // 有字串 (行事曆事件)：藍燈 (不可按)
+            rowHTML += `<button class="slot-btn slot-event border rounded-lg py-1.5 text-xs font-bold truncate px-1 shadow-inner" disabled title="${cellVal}">${cellVal}</button>`;
+          }
+        });
+        rowHTML += `</div>`;
+        container.insertAdjacentHTML('beforeend', rowHTML);
+      }
+    }
+
+    function changeWeek(dir) {
+      currentWkIndex += dir;
+      if (currentWkIndex < 0) currentWkIndex = 0;
+      if (currentWkIndex >= weekCols.length) currentWkIndex = weekCols.length - 1;
+      renderScheduleView();
+    }
+
+    function toggleSlot(btn) {
+      if (btn.classList.contains('slot-open')) {
+        btn.classList.replace('slot-open', 'slot-closed');
+        btn.innerText = "休假";
+        btn.dataset.val = "true";
+      } else {
+        btn.classList.replace('slot-closed', 'slot-open');
+        btn.innerText = "開放";
+        btn.dataset.val = "false";
+      }
+    }
+
+    // 4. API 儲存邏輯
+    function saveAllSettings() {
+      const saveBtn = document.getElementById('save-settings-btn');
+      saveBtn.innerHTML = `<span>⏳</span> 寫入中...`; saveBtn.disabled = true;
+
+      const checkedDays = Array.from(document.querySelectorAll('#weekdays-container input[type="checkbox"]:checked')).map(cb => cb.value);
+      const configData = {
+        tag: document.getElementById('conf-tag').value,
+        title: document.getElementById('conf-title').value,
+        desc: document.getElementById('conf-desc').value,
+        line_url: document.getElementById('conf-line').value,
+        open_time: document.getElementById('conf-open').value,
+        close_time: document.getElementById('conf-close').value,
+        interval: document.getElementById('conf-interval').value,
+        advance_days: document.getElementById('conf-advance').value,
+        closed_weekdays: checkedDays.join(', ')
+      };
+
+      const servicesData = Array.from(document.querySelectorAll('.service-card')).map(card => {
+        const inputs = card.querySelectorAll('input');
+        return { category: inputs[0].value, name: inputs[1].value, duration: inputs[2].value, price: inputs[3].value };
+      });
+
+      fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "update_settings", config: configData, services: servicesData }) })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.status === 'success' ? "✅ 設定與服務清單已更新！\n(如果更改了營業時間，排班表已在背景重繪，請重整畫面查看)" : "❌ 失敗：" + data.message);
+      })
+      .finally(() => { saveBtn.innerHTML = `<span>💾</span> 儲存設定與服務清單`; saveBtn.disabled = false; });
+    }
+
+    function saveSchedule() {
+      const saveBtn = document.getElementById('save-schedule-btn');
+      saveBtn.innerHTML = `<span>⏳</span> 儲存中...`; saveBtn.disabled = true;
+
+      // 掃描畫面上所有的排班按鈕 (有 data-val 屬性代表被修改過)
+      const updates = [];
+      document.querySelectorAll('.slot-btn').forEach(btn => {
+        if (btn.dataset.val) {
+          updates.push({
+            r: parseInt(btn.dataset.r), 
+            c: parseInt(btn.dataset.c), 
+            val: btn.dataset.val === "true" // 轉回 boolean: true=打勾(休假)
+          });
+        }
+      });
+
+      if (updates.length === 0) {
+        alert("沒有任何修改！");
+        saveBtn.innerHTML = `<span>💾</span> 儲存最新排班`; saveBtn.disabled = false;
+        return;
+      }
+
+      fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: "update_schedule", updates: updates }) })
+      .then(res => res.json())
+      .then(data => {
+        alert(data.status === 'success' ? "✅ 排班狀態已同步至試算表！" : "❌ 失敗：" + data.message);
+        // 清除標記
+        document.querySelectorAll('.slot-btn').forEach(btn => delete btn.dataset.val);
+      })
+      .finally(() => { saveBtn.innerHTML = `<span>💾</span> 儲存最新排班`; saveBtn.disabled = false; });
+    }
+  </script>
+</body>
+</html>
