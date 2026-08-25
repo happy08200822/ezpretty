@@ -26,9 +26,16 @@
     .shop-title { font-size: 1.3rem; font-weight: 800; color: var(--text); }
     .shop-desc { font-size: 0.85rem; color: var(--muted); margin-top: 6px; line-height: 1.5; }
     
-    .section-label { font-size: 0.9rem; font-weight: 700; margin: 18px 0 10px; display: flex; align-items: center; gap: 6px; }
+    .section-label { font-size: 0.9rem; font-weight: 700; margin: 18px 0 10px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .section-left { display: flex; align-items: center; gap: 6px; }
     .step-badge { width: 18px; height: 18px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 0.7rem; display: inline-flex; align-items: center; justify-content: center; }
     
+    /* 週次切換按鈕 */
+    .week-nav { display: flex; gap: 4px; }
+    .week-btn { background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; font-weight: 600; color: var(--muted); cursor: pointer; transition: 0.15s; }
+    .week-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+    .week-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
     .services-grid { display: flex; flex-direction: column; gap: 8px; }
     .service-item { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.15s; }
     .service-item:hover { border-color: var(--primary); }
@@ -48,8 +55,6 @@
     .time-btn:hover { border-color: var(--primary); color: var(--primary); }
     .time-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
     .time-btn.disabled { background: #f1f5f9; color: #cbd5e1; border-color: #f1f5f9; cursor: not-allowed; text-decoration: line-through; }
-    
-    /* 讓尚未同步完成的時段呈現半透明，暗示正在載入 */
     .time-btn.syncing { opacity: 0.5; pointer-events: none; }
     
     .input-row { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
@@ -95,20 +100,31 @@
     <p class="shop-desc" id="shopDesc">Google Meet 線上操作 · 免開鏡頭 · 約30分鐘</p>
   </div>
 
-  <div class="section-label"><span class="step-badge">1</span> 選擇預約項目</div>
+  <div class="section-label">
+    <div class="section-left"><span class="step-badge">1</span> 選擇預約項目</div>
+  </div>
   <div class="services-grid" id="servicesList"></div>
 
-  <div class="section-label"><span class="step-badge">2</span> 選擇預約日期</div>
+  <div class="section-label">
+    <div class="section-left"><span class="step-badge">2</span> 選擇預約日期</div>
+    <div class="week-nav">
+      <button class="week-btn" id="prevWeekBtn" onclick="changeWeek(-1)" disabled>◀ 上一週</button>
+      <button class="week-btn" id="nextWeekBtn" onclick="changeWeek(1)">下一週 ▶</button>
+    </div>
+  </div>
   <div class="date-grid" id="dateList"></div>
 
-  <!-- 時段標題加入同步狀態提示 -->
   <div class="section-label">
-    <span class="step-badge">3</span> 選擇時段 
-    <span id="syncStatus" style="font-size:0.75rem; color:#f59e0b; margin-left:8px; font-weight:normal;">(同步即時空檔中...)</span>
+    <div class="section-left">
+      <span class="step-badge">3</span> 選擇時段 
+      <span id="syncStatus" style="font-size:0.75rem; color:#f59e0b; margin-left:8px; font-weight:normal;">(同步即時空檔中...)</span>
+    </div>
   </div>
   <div class="time-grid" id="timeList"></div>
 
-  <div class="section-label"><span class="step-badge">4</span> 聯絡資訊</div>
+  <div class="section-label">
+    <div class="section-left"><span class="step-badge">4</span> 聯絡資訊</div>
+  </div>
   <div class="input-row">
     <input type="text" class="input-field" id="custName" placeholder="店家名稱 / 您的稱呼 *" oninput="checkValid()">
     <input type="tel" class="input-field" id="custPhone" placeholder="聯絡電話 *" oninput="checkValid()">
@@ -124,7 +140,6 @@
   <div class="hint-text">點擊後將自動寫入排程並開啟 LINE</div>
 </div>
 
-<!-- 防呆引導彈窗 -->
 <div class="modal-overlay" id="guideModal">
   <div class="modal-box">
     <div class="modal-icon">📋</div>
@@ -150,17 +165,18 @@
 
   const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
   let dynamicHours = []; 
-  let currentConfig = { line_url: "https://line.me/ti/p/lcu67rCFAY" };
+  let currentConfig = { line_url: "https://line.me/ti/p/lcu67rCFAY", advance_days: 30 }; 
   let bookedMap = {};
   
   let selectedService = "";
   let isNeedAddress = false;
   let selectedDate = null;
   let selectedTime = null;
-  let daysData = [];
-  let preparedMessage = "";
   
-  // 新增一個變數追蹤是否已經同步完日曆
+  let allDaysData = []; 
+  let weeksData = []; 
+  let currentWeekIndex = 0; 
+  let preparedMessage = "";
   let isSynced = false;
 
   function formatLocalDate(d) {
@@ -204,16 +220,14 @@
   }
 
   window.onload = function() {
-    // 1. 網頁一打開，立刻用預設資料把畫面畫出來，0秒等待！
-    initDates();
+    initAllDates(30);
     renderDefaultServices();
 
-    // 2. 在背景默默去抓 Google Sheet 跟 日曆資料
     fetch(API_URL)
       .then(res => res.json())
       .then(data => {
         if (data.status === 'success') {
-          isSynced = true; // 標記已同步完成
+          isSynced = true; 
           currentConfig = data.config;
           bookedMap = data.booked;
           
@@ -221,21 +235,22 @@
           if (currentConfig.title) document.getElementById('shopTitle').innerText = currentConfig.title;
           if (currentConfig.desc) document.getElementById('shopDesc').innerText = currentConfig.desc;
           
+          const advDays = parseInt(currentConfig.advance_days || 7, 10);
+          initAllDates(advDays);
+
           let openT = currentConfig.open_time || "10:00";
           let closeT = currentConfig.close_time || "20:00";
           let intv = currentConfig.interval || "60";
           dynamicHours = generateTimeSlots(openT, closeT, intv);
 
-          // 重新渲染服務與時段（把真正被約走的時間打叉）
           renderServices(currentConfig.services || []);
           renderTimes();
           
-          // 隱藏同步提示文字
           document.getElementById('syncStatus').style.display = 'none';
         }
       })
       .catch(err => {
-        console.error("載入試算表失敗，維持預設狀態", err);
+        console.error("載入試算表失敗", err);
         isSynced = true;
         renderTimes();
         document.getElementById('syncStatus').innerText = "(無法取得最新空檔)";
@@ -243,13 +258,87 @@
       });
   };
 
+  // 【核心功能】：依據「星期日」切分週次，並更新 WeeksData
+  function initAllDates(totalDays) {
+    allDaysData = [];
+    weeksData = []; 
+    let currentWeekArray = []; 
+
+    const now = new Date();
+
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date();
+      d.setDate(now.getDate() + i);
+      const iso = formatLocalDate(d);
+      const m = d.getMonth() + 1;
+      const date = d.getDate();
+      const dayOfWeek = d.getDay(); // 0 是星期日
+      const w = weekdays[dayOfWeek];
+      const wLabel = (i === 0) ? '今天' : `週${w}`;
+
+      const dayObj = { iso, label: `${m}/${date}`, w: wLabel, isToday: (i === 0) };
+      allDaysData.push(dayObj);
+      currentWeekArray.push(dayObj);
+
+      // 如果遇到星期日，或是跑到設定的最後一天，就把這些日子打包成一週
+      if (dayOfWeek === 0 || i === totalDays - 1) {
+        weeksData.push(currentWeekArray);
+        currentWeekArray = []; 
+      }
+    }
+    
+    if (!selectedDate || !allDaysData.some(d => d.iso === selectedDate)) {
+      selectedDate = allDaysData[0].iso;
+    }
+    
+    currentWeekIndex = 0; 
+    renderDateGrid();
+  }
+
+  // 畫出日曆的 UI
+  function renderDateGrid() {
+    const box = document.getElementById('dateList');
+    box.innerHTML = '';
+
+    const currentWeekDays = weeksData[currentWeekIndex] || [];
+
+    currentWeekDays.forEach((d) => {
+      const btn = document.createElement('div');
+      btn.className = `date-btn ${d.iso === selectedDate ? 'active' : ''}`;
+      btn.innerHTML = `<div class="d-w">${d.w}</div><div class="d-n">${d.label}</div>`;
+      btn.onclick = () => {
+        document.querySelectorAll('.date-btn').forEach(el => el.classList.remove('active'));
+        btn.classList.add('active');
+        selectedDate = d.iso;
+        selectedTime = null;
+        renderTimes();
+        checkValid();
+      };
+      box.appendChild(btn);
+    });
+
+    // 處理 上一週 / 下一週 按鈕的鎖定狀態
+    document.getElementById('prevWeekBtn').disabled = (currentWeekIndex === 0);
+    document.getElementById('nextWeekBtn').disabled = (currentWeekIndex >= weeksData.length - 1);
+  }
+
+  function changeWeek(direction) {
+    const maxIndex = weeksData.length - 1;
+    currentWeekIndex += direction;
+    
+    if (currentWeekIndex < 0) currentWeekIndex = 0;
+    if (currentWeekIndex > maxIndex) currentWeekIndex = maxIndex;
+
+    renderDateGrid();
+  }
+
   function renderDefaultServices() {
     dynamicHours = generateTimeSlots("10:00", "20:00", "60");
     renderServices([
       { name: "30分鐘 系統功能線上展示 (免開鏡頭)", duration: "30 min", price: "免費" },
       { name: "1對1 店家營運現場展示", duration: "60 min", price: "免費" }
     ]);
-    renderTimes(); // 畫出預設時段
+    renderTimes(); 
   }
 
   function renderServices(services) {
@@ -294,41 +383,6 @@
     }
   }
 
-  function initDates() {
-    daysData = [];
-    const now = new Date();
-
-    for (let i = 0; i < 7; i++) {
-      const d = new Date();
-      d.setDate(now.getDate() + i);
-      const iso = formatLocalDate(d);
-      const m = d.getMonth() + 1;
-      const date = d.getDate();
-      const w = weekdays[d.getDay()];
-      const wLabel = (i === 0) ? '今天' : `週${w}`;
-
-      daysData.push({ iso, label: `${m}/${date}`, w: wLabel, isToday: (i === 0) });
-    }
-    selectedDate = daysData[0].iso;
-
-    const box = document.getElementById('dateList');
-    box.innerHTML = '';
-    daysData.forEach((d, idx) => {
-      const btn = document.createElement('div');
-      btn.className = `date-btn ${idx === 0 ? 'active' : ''}`;
-      btn.innerHTML = `<div class="d-w">${d.w}</div><div class="d-n">${d.label}</div>`;
-      btn.onclick = () => {
-        document.querySelectorAll('.date-btn').forEach(el => el.classList.remove('active'));
-        btn.classList.add('active');
-        selectedDate = d.iso;
-        selectedTime = null;
-        renderTimes();
-        checkValid();
-      };
-      box.appendChild(btn);
-    });
-  }
-
   function renderTimes() {
     const box = document.getElementById('timeList');
     box.innerHTML = '';
@@ -349,7 +403,6 @@
       const isBooked = isAllDayBlocked || bookedForDay.includes(t) || isPastTime;
 
       const btn = document.createElement('div');
-      // 如果還沒同步完成，給一個半透明的效果讓客人知道還不能點
       const syncClass = isSynced ? '' : 'syncing'; 
       btn.className = `time-btn ${isBooked ? 'disabled' : ''} ${t === selectedTime ? 'active' : ''} ${syncClass}`;
       btn.innerText = t;
@@ -367,7 +420,6 @@
   }
 
   function checkValid() {
-    // 必須確認日曆已經同步完成才能送出
     if (!isSynced) return; 
     
     const name = document.getElementById('custName').value.trim();
@@ -380,11 +432,9 @@
     btn.disabled = !isValid;
   }
 
-  // 【新增】老舊手機與 LINE 內部瀏覽器的專用複製備案
   function fallbackCopyTextToClipboard(text) {
     const textArea = document.createElement("textarea");
     textArea.value = text;
-    // 避免畫面亂跳，固定在角落
     textArea.style.top = "0";
     textArea.style.left = "0";
     textArea.style.position = "fixed";
@@ -399,7 +449,6 @@
     document.body.removeChild(textArea);
   }
 
-  // 送出預約：寫入 Google Sheet + Google 日曆 + 彈窗引導
   function prepareBooking() {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
@@ -408,7 +457,8 @@
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
     const address = document.getElementById('custAddress').value.trim();
-    const dayObj = daysData.find(d => d.iso === selectedDate);
+    
+    const dayObj = allDaysData.find(d => d.iso === selectedDate);
 
     const methodText = isNeedAddress 
                        ? `📍 拜訪地點：${address}` 
@@ -422,7 +472,6 @@
                       `${methodText}\n\n` +
                       `再麻煩您確認預約，謝謝！`;
 
-    // 【關鍵修正 1】按下按鈕的第一時間，立刻執行複製動作！破解舊版 iOS 限制
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(preparedMessage).catch(() => {
         fallbackCopyTextToClipboard(preparedMessage);
@@ -431,7 +480,6 @@
       fallbackCopyTextToClipboard(preparedMessage);
     }
 
-    // 【關鍵修正 2】複製完畢後，再發送 API 給 GAS 背景處理
     const payload = {
       custName: name,
       custPhone: phone,
@@ -447,13 +495,11 @@
     })
     .then(res => res.json())
     .then(res => {
-      // 成功後顯示彈窗
       document.getElementById('guideModal').style.display = 'flex';
       btn.innerText = "傳送預約至 LINE 進行確認";
     })
     .catch(err => {
       console.error("同步至後台失敗", err);
-      // 就算網路斷線，也讓客人可以傳 LINE
       document.getElementById('guideModal').style.display = 'flex';
       btn.innerText = "傳送預約至 LINE 進行確認";
     });
